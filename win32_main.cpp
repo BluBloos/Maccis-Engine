@@ -57,6 +57,21 @@ void Win32ProcessMessages()
 void Win32InitOpenGL(HWND window)
 {
   HDC dc = GetDC(window);
+
+  PIXELFORMATDESCRIPTOR desiredPixelFormat = {};
+  desiredPixelFormat.nSize = sizeof(desiredPixelFormat);
+  desiredPixelFormat.nVersion = 1;
+  desiredPixelFormat.dwFlags = PFD_SUPPORT_OPENGL|PFD_DRAW_TO_WINDOW|PFD_DOUBLEBUFFER;
+  desiredPixelFormat.cColorBits = 32;
+  desiredPixelFormat.cAlphaBits = 8;
+  desiredPixelFormat.iLayerType = PFD_MAIN_PLANE;
+
+  int suggestedPixelFormatIndex = ChoosePixelFormat(dc, &desiredPixelFormat);
+  PIXELFORMATDESCRIPTOR suggestedPixelFormat = {};
+  DescribePixelFormat(dc, suggestedPixelFormatIndex,
+    sizeof(suggestedPixelFormat), &suggestedPixelFormat);
+  SetPixelFormat(dc, suggestedPixelFormatIndex, &suggestedPixelFormat);
+
   HGLRC glrc = wglCreateContext(dc);
   if(wglMakeCurrent(dc, glrc))
   {
@@ -91,10 +106,21 @@ int CALLBACK WinMain(HINSTANCE instance,
 
     if(windowHandle)
     {
+      Win32InitOpenGL(windowHandle);
+      HDC dc = GetDC(windowHandle);
+      RECT rect = {};
       while(globalRunning)
 			{
         Win32ProcessMessages();
+
+        GetWindowRect(windowHandle, &rect);
+        glViewport(0, 0, rect.right - rect.left,
+           rect.top - rect.bottom);
+        glClearColor(1.0f, 0.0f, 1.0f, 0.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        SwapBuffers(dc);
       }
+      ReleaseDC(windowHandle, dc);
     } else
     {
       DWORD error = GetLastError();
