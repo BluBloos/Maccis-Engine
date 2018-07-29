@@ -1,5 +1,6 @@
 #include <Windows.h>
 #include <stdio.h>
+#include "gl.h"
 
 #define INTERNAL static
 #define PERSISTENT static
@@ -51,6 +52,20 @@ void Win32ProcessMessages()
       DispatchMessage(&message);
     }
 	}
+}
+
+void Win32InitOpenGL(HWND window)
+{
+  HDC dc = GetDC(window);
+  HGLRC glrc = wglCreateContext(dc);
+  if(wglMakeCurrent(dc, glrc))
+  {
+    //NOTE(Noah): everythings good
+  }else
+  {
+    //TODO(Noah): opengl did not initialize
+  }
+  ReleaseDC(window, dc);
 }
 
 int CALLBACK WinMain(HINSTANCE instance,

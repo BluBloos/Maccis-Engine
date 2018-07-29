@@ -1,1 +1,2 @@
-g++ win32_main.cpp -o Maccis
+echo off
+g++ -Iinclude -o Maccis win32_main.cpp -Llib -lopengl32
