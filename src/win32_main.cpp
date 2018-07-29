@@ -89,6 +89,49 @@ void Win32InitOpenGL(HWND window)
   ReleaseDC(window, dc);
 }
 
+INTERNAL unsigned int CompileShader(unsigned int type, char *shader)
+{
+  unsigned int id = glCreateShader(type);
+  glShaderSource(id, 1, &shader, NULL);
+  glCompileShader(id);
+
+  int result;
+  glGetShaderiv(id, GL_COMPILE_STATUS, &result);
+  if(result == GL_FALSE)
+  {
+    int length;
+    glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
+    char *message = (char *)alloca(length * sizeof(char));
+    glGetShaderInfoLog(id, length, &length, message);
+    std::cout << "Failed to comile shader!" << std::endl;
+    std::cout << message << std::endl;
+    glDeleteShader(id);
+    return 0;
+  }
+
+  return id;
+}
+
+INTERNAL unsigned int CreateShaders(char *vertexShader, char *fragmentShader)
+{
+  unsigned int program = glCreateProgram();
+  unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexShader);
+  unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShader);
+
+  glAttachShader(program, vs);
+  glAttachShader(program, fs);
+
+  //TODO(Noah): Assert if the shader compilation fails
+
+  glLinkProgram(program);
+  glValidateProgram(program);
+
+  glDeleteShader(vs);
+  glDeleteShader(fs);
+
+  return program;
+}
+
 int CALLBACK WinMain(HINSTANCE instance,
   HINSTANCE prevInstance,
   LPSTR cmdLine,
@@ -113,17 +156,38 @@ int CALLBACK WinMain(HINSTANCE instance,
     if(windowHandle)
     {
       Win32InitOpenGL(windowHandle);
+
       HDC dc = GetDC(windowHandle);
       RECT rect = {};
+
+      float positions[6] = {
+        -0.5f, -0.5f,
+         0.0f, 0.5f,
+         0.5f, -0.5f
+      };
+
+      unsigned int buffer; //create the storage for the generated ID of the buffer
+      glGenBuffers(1, &buffer);
+      glBindBuffer(GL_ARRAY_BUFFER, buffer); //select the buffer
+      glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(float), positions, GL_STATIC_DRAW);
+
+      glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
+      glEnableVertexAttribArray(0);
+
+      //TODO(Noah): Load in the shaders from their respective files and create them
+      unsigned int program;
+      glUseProgram(program);
+
       while(globalRunning)
 			{
         Win32ProcessMessages();
-
         GetWindowRect(windowHandle, &rect);
-        glViewport(0, 0, rect.right - rect.left,
-           rect.top - rect.bottom);
-        glClearColor(1.0f, 0.0f, 1.0f, 0.0f);
+
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+
         SwapBuffers(dc);
       }
       ReleaseDC(windowHandle, dc);
