@@ -1,2 +1,4 @@
 @echo off
-g++ -Iinclude -o Maccis win32_main.cpp -Llib -lopengl32 -lgdi32
+pushd build
+cl -I ..\include -D GLEW_STATIC -Femaccis -EHsc ..\src\win32_main.cpp /link /LIBPATH:..\lib gdi32.lib opengl32.lib user32.lib glew32s.lib
+popd

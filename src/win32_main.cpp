@@ -1,5 +1,7 @@
 #include <Windows.h>
-#include <stdio.h>
+#include <iostream>
+
+#include "glew.h"
 #include "gl.h"
 
 #define INTERNAL static
@@ -75,7 +77,11 @@ void Win32InitOpenGL(HWND window)
   HGLRC glrc = wglCreateContext(dc);
   if(wglMakeCurrent(dc, glrc))
   {
-    //NOTE(Noah): everythings good
+    GLenum err = glewInit();
+    if(GLEW_OK != err)
+    {
+      //TODO(Noah): something is seriously wrong
+    }
   }else
   {
     //TODO(Noah): opengl did not initialize
@@ -121,17 +127,6 @@ int CALLBACK WinMain(HINSTANCE instance,
         SwapBuffers(dc);
       }
       ReleaseDC(windowHandle, dc);
-    } else
-    {
-      DWORD error = GetLastError();
-      char Buffer[256];
-      if(FormatMessage(FORMAT_MESSAGE_FROM_STRING, Buffer, 0, 0, NULL, 256, NULL) != 0)
-      {
-        printf("%s\n", Buffer);
-      } else
-      {
-        printf("Format message failed\n");
-      }
     }
   }
 }
