@@ -6,6 +6,11 @@
 
 #define INTERNAL static
 #define PERSISTENT static
+#ifdef DEBUG
+#define Assert(Expression) if (!(Expression)) {*(int *)0 = 0;}
+#else
+#define Assert(Expression)
+#endif
 
 INTERNAL bool globalRunning = true;
 
@@ -87,6 +92,107 @@ void Win32InitOpenGL(HWND window)
     //TODO(Noah): opengl did not initialize
   }
   ReleaseDC(window, dc);
+}
+
+struct read_file_result
+{
+  void *content;
+  unsigned int contentSize;
+};
+
+void Win32FreeFile(void *memory)
+{
+  if (memory)
+	{
+		VirtualFree(memory,0,MEM_RELEASE);
+	}
+}
+
+read_file_result Win32ReadFile(char *filePath)
+{
+  read_file_result fileResult = {};
+	unsigned int fileSize32;
+  //https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-createfilea
+	HANDLE fileHandle = CreateFileA(filePath, GENERIC_READ, FILE_SHARE_READ,
+    NULL, OPEN_EXISTING, 0, NULL);
+	if (fileHandle != INVALID_HANDLE_VALUE)
+	{
+		LARGE_INTEGER fileSize64;
+    //https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-getfilesizeex
+		if (GetFileSizeEx(fileHandle, &fileSize64))
+		{
+			Assert(fileSize64.QuadPart <= 0xFFFFFFF);
+			fileSize32 = (unsigned int)fileSize64.QuadPart;
+			fileResult.content = VirtualAlloc(NULL, fileSize32, MEM_COMMIT, PAGE_READWRITE);
+			if (fileResult.content)
+			{
+				DWORD bytesRead;
+        //https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-readfile
+				if (!ReadFile(fileHandle, fileResult.content, fileSize32,
+					&bytesRead, NULL) || fileSize32 != (unsigned int)bytesRead)
+				{
+					Win32FreeFile(fileResult.content);
+					fileResult.content = NULL;
+          return fileResult;
+				}
+        fileResult.contentSize = fileSize32;
+			}
+		}
+		CloseHandle(fileHandle);
+	}
+	return fileResult;
+}
+
+void CatStrings(int sourceACount, char *sourceA, int sourceBCount,
+ char *sourceB, int destCount, char *dest)
+{
+	for (int index = 0; index < sourceACount; index++)
+	{
+		*dest++ = *sourceA++;
+	}
+	for (int index = 0; index < sourceBCount; index++)
+	{
+		*dest++ = *sourceB++;
+	}
+	*dest = 0;
+}
+
+unsigned int GetStringLength(char *string)
+{
+	unsigned int count = 0;
+	while (*string != 0)
+	{
+		string++; count++;
+	}
+	return count;
+}
+
+struct relative_path
+{
+  char path[MAX_PATH];
+  unsigned int length;
+};
+
+
+void Win32BuildFilePath(relative_path rpath, char *fileName, char *dest, int destCount)
+{
+	CatStrings(rpath.length, rpath.path, GetStringLength(fileName), fileName, destCount, dest);
+}
+
+relative_path Win32GetRelativePath(relative_path rpath)
+{
+  //https://msdn.microsoft.com/en-us/library/windows/desktop/ms683197(v=vs.85).aspx
+	DWORD pathSize = GetModuleFileNameA(NULL, rpath.path, rpath.length);
+  char *buffer = rpath.path;
+  for (char *scan = rpath.path;*scan;++scan)
+	{
+		if (*scan == '\\')
+		{
+			buffer = scan + 1;
+		}
+	}
+  rpath.length = buffer - rpath.path;
+  return rpath;
 }
 
 INTERNAL unsigned int CompileShader(unsigned int type, char *shader)
