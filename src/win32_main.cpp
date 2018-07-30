@@ -1,16 +1,9 @@
 #include <Windows.h>
 #include <iostream>
+#include <glew.h>
+#include <gl.h>
 
-#include "glew.h"
-#include "gl.h"
-
-#define INTERNAL static
-#define PERSISTENT static
-#ifdef DEBUG
-#define Assert(Expression) if (!(Expression)) {*(int *)0 = 0;}
-#else
-#define Assert(Expression)
-#endif
+#include <engine.cpp>
 
 INTERNAL bool globalRunning = true;
 
@@ -94,12 +87,6 @@ void Win32InitOpenGL(HWND window)
   ReleaseDC(window, dc);
 }
 
-struct read_file_result
-{
-  void *content;
-  unsigned int contentSize;
-};
-
 void Win32FreeFile(void *memory)
 {
   if (memory)
@@ -108,7 +95,7 @@ void Win32FreeFile(void *memory)
 	}
 }
 
-read_file_result Win32ReadFile(char *filePath)
+PLATFORM_READ_FILE(Win32ReadFile)
 {
   read_file_result fileResult = {};
 	unsigned int fileSize32;
@@ -143,99 +130,22 @@ read_file_result Win32ReadFile(char *filePath)
 	return fileResult;
 }
 
-void CatStrings(int sourceACount, char *sourceA, int sourceBCount,
- char *sourceB, int destCount, char *dest)
-{
-	for (int index = 0; index < sourceACount; index++)
-	{
-		*dest++ = *sourceA++;
-	}
-	for (int index = 0; index < sourceBCount; index++)
-	{
-		*dest++ = *sourceB++;
-	}
-	*dest = 0;
-}
-
-unsigned int GetStringLength(char *string)
-{
-	unsigned int count = 0;
-	while (*string != 0)
-	{
-		string++; count++;
-	}
-	return count;
-}
-
-struct relative_path
-{
-  char path[MAX_PATH];
-  unsigned int length;
-};
-
-
-void Win32BuildFilePath(relative_path rpath, char *fileName, char *dest, int destCount)
-{
-	CatStrings(rpath.length, rpath.path, GetStringLength(fileName), fileName, destCount, dest);
-}
-
-relative_path Win32GetRelativePath(relative_path rpath)
+file_path Win32GetRelativePath(file_path rpath)
 {
   //https://msdn.microsoft.com/en-us/library/windows/desktop/ms683197(v=vs.85).aspx
 	DWORD pathSize = GetModuleFileNameA(NULL, rpath.path, rpath.length);
   char *buffer = rpath.path;
+  char *buffer2 = rpath.path;
   for (char *scan = rpath.path;*scan;++scan)
 	{
 		if (*scan == '\\')
 		{
+      buffer2 = buffer;
 			buffer = scan + 1;
 		}
 	}
-  rpath.length = buffer - rpath.path;
+  rpath.length = buffer2 - rpath.path;
   return rpath;
-}
-
-INTERNAL unsigned int CompileShader(unsigned int type, char *shader)
-{
-  unsigned int id = glCreateShader(type);
-  glShaderSource(id, 1, &shader, NULL);
-  glCompileShader(id);
-
-  int result;
-  glGetShaderiv(id, GL_COMPILE_STATUS, &result);
-  if(result == GL_FALSE)
-  {
-    int length;
-    glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
-    char *message = (char *)alloca(length * sizeof(char));
-    glGetShaderInfoLog(id, length, &length, message);
-    std::cout << "Failed to comile shader!" << std::endl;
-    std::cout << message << std::endl;
-    glDeleteShader(id);
-    return 0;
-  }
-
-  return id;
-}
-
-INTERNAL unsigned int CreateShaders(char *vertexShader, char *fragmentShader)
-{
-  unsigned int program = glCreateProgram();
-  unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexShader);
-  unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShader);
-
-  glAttachShader(program, vs);
-  glAttachShader(program, fs);
-
-  //TODO(Noah): Assert if the shader compilation fails
-
-  glLinkProgram(program);
-  glValidateProgram(program);
-
-  glDeleteShader(vs);
-  glDeleteShader(fs);
-
-  return program;
 }
 
 int CALLBACK WinMain(HINSTANCE instance,
@@ -243,6 +153,10 @@ int CALLBACK WinMain(HINSTANCE instance,
   LPSTR cmdLine,
   int showCode)
 {
+  char stringBuffer[256];
+  file_path filePath = {}; filePath.length = MAX_PATH;
+  filePath = Win32GetRelativePath(filePath);
+
   //https://msdn.microsoft.com/en-us/library/windows/desktop/ms633576
   WNDCLASS windowClass = {};
   windowClass.style = CS_VREDRAW|CS_HREDRAW; //Set window to redraw after being resized
@@ -266,33 +180,18 @@ int CALLBACK WinMain(HINSTANCE instance,
       HDC dc = GetDC(windowHandle);
       RECT rect = {};
 
-      float positions[6] = {
-        -0.5f, -0.5f,
-         0.0f, 0.5f,
-         0.5f, -0.5f
-      };
+      engine_memory engineMemory = {};
+      engineMemory.maccisDirectory = filePath;
+      engineMemory.ReadFile = Win32ReadFile;
 
-      unsigned int buffer; //create the storage for the generated ID of the buffer
-      glGenBuffers(1, &buffer);
-      glBindBuffer(GL_ARRAY_BUFFER, buffer); //select the buffer
-      glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(float), positions, GL_STATIC_DRAW);
-
-      glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
-      glEnableVertexAttribArray(0);
-
-      //TODO(Noah): Load in the shaders from their respective files and create them
-      unsigned int program;
-      glUseProgram(program);
+      Init(engineMemory);
 
       while(globalRunning)
 			{
         Win32ProcessMessages();
-        GetWindowRect(windowHandle, &rect);
+        //GetWindowRect(windowHandle, &rect);
 
-        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        Update(engineMemory);
 
         SwapBuffers(dc);
       }
