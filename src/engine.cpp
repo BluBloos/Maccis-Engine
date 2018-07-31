@@ -1,4 +1,6 @@
 #include <maccis.h>
+#include <maccis_math.h>
+#include <renderer.cpp>
 #include <engine.h>
 
 INTERNAL float positions[] = {
@@ -66,8 +68,9 @@ INTERNAL unsigned int CompileShader(unsigned int type, char *shader)
   return id;
 }
 
-INTERNAL unsigned int CreateShaders(char *vertexShader, char *fragmentShader)
+INTERNAL shader CreateShader(char *vertexShader, char *fragmentShader)
 {
+  shader s;
   unsigned int program = glCreateProgram();
   unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexShader);
   unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShader);
@@ -83,42 +86,65 @@ INTERNAL unsigned int CreateShaders(char *vertexShader, char *fragmentShader)
   glDeleteShader(vs);
   glDeleteShader(fs);
 
-  return program;
+  s.id = program;
+  return s;
+}
+
+vertex_buffer CreateVertexBuffer(float *data, unsigned int count)
+{
+  vertex_buffer buffer; buffer.elementSize = sizeof(float); buffer.size = buffer.elementSize * count;
+  glGenBuffers(1, &buffer.id);
+  glBindBuffer(GL_ARRAY_BUFFER, buffer.id); //select the buffer
+  glBufferData(GL_ARRAY_BUFFER, buffer.size, data, GL_STATIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  return buffer;
+}
+
+index_buffer CreateIndexBuffer(unsigned int *data, unsigned int count)
+{
+  index_buffer buffer; buffer.count = count;
+  glGenBuffers(1, &buffer.id);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.id);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, buffer.count * sizeof(unsigned int), data, GL_STATIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+  return buffer;
+}
+
+vertex_array CreateVertexArray()
+{
+  vertex_array vertexArray;
+  glGenVertexArrays(1, &vertexArray.id);
+  return vertexArray;
+}
+
+buffer_layout CreateBufferLayout()
+{
+  buffer_layout bufferLayout = {};
+  return bufferLayout;
 }
 
 void Init(engine_memory memory)
 {
+  engine_state *engineState = (engine_state *)memory.storage;
   char stringBuffer[260];
-  unsigned int vao;
-  glGenVertexArrays(1, &vao);
-  glBindVertexArray(vao);
 
-  unsigned int buffer; //create the storage for the generated ID of the buffer
-  glGenBuffers(1, &buffer);
-  glBindBuffer(GL_ARRAY_BUFFER, buffer); //select the buffer
-  glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), positions, GL_STATIC_DRAW);
-
-  unsigned int ibo; //create the storage for the generated ID of the buffer
-  glGenBuffers(1, &ibo);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo); //select the buffer
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices, GL_STATIC_DRAW);
-
-  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
-  glEnableVertexAttribArray(0);
+  engineState->vertexArray = CreateVertexArray(); //make the vao
+  vertex_buffer vertexBuffer = CreateVertexBuffer(positions, 8); //make the vertex buffer
+  buffer_layout bufferLayout = CreateBufferLayout(); //make a buffer layout
+  bufferLayout.push(2, GL_FLOAT); //describe the buffer layout
+  engineState->vertexArray.addBuffer(vertexBuffer, bufferLayout); //describe the vao
+  engineState->indexBuffer = CreateIndexBuffer(indices, 6);
 
   read_file_result f1 = memory.ReadFile(BuildFilePath(memory.maccisDirectory, "src\\shader.vert", stringBuffer, 260));
   read_file_result f2 = memory.ReadFile(BuildFilePath(memory.maccisDirectory, "src\\shader.frag", stringBuffer, 260));
-  unsigned int program = CreateShaders((char *)f1.content, (char *)f2.content);
-  glUseProgram(program);
+  shader sh = CreateShader((char *)f1.content, (char *)f2.content);
 
-  int location = glGetUniformLocation(program, "ucolor");
-  Assert(location != -1);
-  glUniform4f(location, 0.2f, 0.3f, 0.8f, 1.0f);
+  engineState->defaultMaterial.sh = sh;
+  engineState->defaultMaterial.setColor(0.5f, 0.3f, 1.0f, 1.0f);
 }
 void Update(engine_memory memory)
 {
-  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-  glClear(GL_COLOR_BUFFER_BIT);
-  //glUniform4f(location, r / 255.0f, 0.3f, 0.8f, 1.0f);
-  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
+  engine_state *engineState = (engine_state *)memory.storage;
+  Clear();
+  Draw(engineState->vertexArray, engineState->indexBuffer, engineState->defaultMaterial);
 }

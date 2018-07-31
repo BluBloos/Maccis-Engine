@@ -1,6 +1,10 @@
 #define INTERNAL static
 #define PERSISTENT static
 
+#define KB(number) number * 1000;
+#define MB(number) KB(number * 1000);
+#define GB(number) MB(number * 1000);  
+
 #ifdef DEBUG
 #define Assert(Expression) if (!(Expression)) {*(int *)0 = 0;}
 #else

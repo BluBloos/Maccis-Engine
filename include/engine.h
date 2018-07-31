@@ -5,3 +5,10 @@ struct engine_memory
   file_path maccisDirectory;
   platform_read_file *ReadFile;
 };
+
+struct engine_state
+{
+  vertex_array vertexArray;
+  index_buffer indexBuffer;
+  material defaultMaterial;
+};

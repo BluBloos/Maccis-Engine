@@ -52,6 +52,18 @@ void Win32ProcessMessages()
       DispatchMessage(&message);
     }
 	}
+
+}
+
+void APIENTRY DebugMessageCallback(GLenum source,
+  GLenum type,
+  GLuint id,
+  GLenum severity,
+  GLsizei length,
+  const GLchar *message,
+  void *userParam)
+{
+  printf("%s\n", message);
 }
 
 void Win32InitOpenGL(HWND window)
@@ -80,6 +92,8 @@ void Win32InitOpenGL(HWND window)
     {
       //TODO(Noah): something is seriously wrong
     }
+
+    glDebugMessageCallback((GLDEBUGPROC)DebugMessageCallback, NULL);
   }else
   {
     //TODO(Noah): opengl did not initialize
@@ -183,6 +197,8 @@ int CALLBACK WinMain(HINSTANCE instance,
       engine_memory engineMemory = {};
       engineMemory.maccisDirectory = filePath;
       engineMemory.ReadFile = Win32ReadFile;
+      engineMemory.storageSize = MB(64);
+      engineMemory.storage = VirtualAlloc(0, engineMemory.storageSize, MEM_COMMIT, PAGE_READWRITE);
 
       Init(engineMemory);
 
@@ -195,6 +211,8 @@ int CALLBACK WinMain(HINSTANCE instance,
 
         SwapBuffers(dc);
       }
+
+      VirtualFree(engineMemory.storage, 0, MEM_RELEASE);
       ReleaseDC(windowHandle, dc);
     }
   }
