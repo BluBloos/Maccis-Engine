@@ -1,9 +1,10 @@
 #include <Windows.h>
-#include <iostream>
+#include <malloc.h>
 #include <glew.h>
 #include <gl.h>
 
 #include <engine.cpp>
+#include <win32_console.cpp>
 
 INTERNAL bool globalRunning = true;
 
@@ -167,6 +168,10 @@ int CALLBACK WinMain(HINSTANCE instance,
   LPSTR cmdLine,
   int showCode)
 {
+  Win32OpenConsole();
+  unsigned int version = 1;
+  printf("Maccis-Engine version %d!\n", version);
+
   char stringBuffer[256];
   file_path filePath = {}; filePath.length = MAX_PATH;
   filePath = Win32GetRelativePath(filePath);

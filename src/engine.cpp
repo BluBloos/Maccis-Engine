@@ -57,7 +57,7 @@ INTERNAL unsigned int CompileShader(unsigned int type, char *shader)
   {
     int length;
     glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
-    char *message = (char *)alloca(length * sizeof(char));
+    char *message = (char *)_alloca(length * sizeof(char));
     glGetShaderInfoLog(id, length, &length, message);
     //std::cout << "Failed to comile shader!" << std::endl;
     //std::cout << message << std::endl;
