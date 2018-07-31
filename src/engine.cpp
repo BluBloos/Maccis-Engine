@@ -3,11 +3,11 @@
 #include <renderer.cpp>
 #include <engine.h>
 
-INTERNAL float positions[] = {
-  -0.5f, -0.5f, //0
-   0.5f, -0.5f, //1
-   0.5f,  0.5f, //2
-  -0.5f,  0.5f  //3
+INTERNAL float vertices[] = {
+  -0.5f, -0.5f, 0.0f, 0.0f, //0
+   0.5f, -0.5f, 1.0f, 0.0f, //1
+   0.5f,  0.5f, 1.0f, 1.0f, //2
+  -0.5f,  0.5f, 0.0f, 1.0f  //3
 };
 
 INTERNAL unsigned int indices[] = {
@@ -123,15 +123,51 @@ buffer_layout CreateBufferLayout()
   return bufferLayout;
 }
 
+loaded_bitmap LoadBMP(platform_read_file *ReadFile, char *path)
+{
+	loaded_bitmap bitmap = {};
+	bitmap.scale = 1;
+	read_file_result fileResult = ReadFile(path);
+	if (fileResult.contentSize != 0)
+	{
+		bitmap_header *header = (bitmap_header *)fileResult.content;
+		bitmap.pixelPointer = (unsigned int *) ( (unsigned char *)fileResult.content + header->BitmapOffset );
+		bitmap.height = header->Height;
+		bitmap.width = header->Width;
+    bitmap.container = fileResult.content;
+	}
+	return bitmap;
+}
+
+texture CreateTexture(platform_read_file *ReadFile, platform_free_file *FreeFile, char *path)
+{
+  texture newTexture;
+  glGenTextures(1, &newTexture.id);
+  glBindTexture(GL_TEXTURE_2D, newTexture.id);
+  newTexture.localTexture = LoadBMP(ReadFile, path);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, newTexture.localTexture.width,
+    newTexture.localTexture.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, newTexture.localTexture.pixelPointer);
+  glBindTexture(GL_TEXTURE_2D, 0);
+  newTexture.localTexture.free(FreeFile);
+  return newTexture;
+}
+
 void Init(engine_memory memory)
 {
   engine_state *engineState = (engine_state *)memory.storage;
   char stringBuffer[260];
 
   engineState->vertexArray = CreateVertexArray(); //make the vao
-  vertex_buffer vertexBuffer = CreateVertexBuffer(positions, 8); //make the vertex buffer
+  vertex_buffer vertexBuffer = CreateVertexBuffer(vertices, 16); //make the vertex buffer
   buffer_layout bufferLayout = CreateBufferLayout(); //make a buffer layout
   bufferLayout.push(2, GL_FLOAT); //describe the buffer layout
+  bufferLayout.push(2, GL_FLOAT);
   engineState->vertexArray.addBuffer(vertexBuffer, bufferLayout); //describe the vao
   engineState->indexBuffer = CreateIndexBuffer(indices, 6);
 
@@ -141,10 +177,24 @@ void Init(engine_memory memory)
 
   engineState->defaultMaterial.sh = sh;
   engineState->defaultMaterial.setColor(0.5f, 0.3f, 1.0f, 1.0f);
+
+  engineState->defaultTexture = CreateTexture(memory.ReadFile, memory.FreeFile,
+    BuildFilePath(memory.maccisDirectory, "res\\test.bmp", stringBuffer, 260));
+  engineState->defaultTexture.bind(0);
+  engineState->defaultMaterial.setTexture(0);
 }
+
 void Update(engine_memory memory)
 {
   engine_state *engineState = (engine_state *)memory.storage;
   Clear();
+  engineState->defaultMaterial.setColor(engineState->r++ / 255.0f, 0.3f, 1.0f, 1.0f);
   Draw(engineState->vertexArray, engineState->indexBuffer, engineState->defaultMaterial);
+}
+
+void Clean(engine_memory memory)
+{
+  engine_state *engineState = (engine_state *)memory.storage;
+  engineState->defaultTexture.del();
+  memory.FreeFile(memory.storage);
 }

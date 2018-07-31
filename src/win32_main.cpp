@@ -102,7 +102,7 @@ void Win32InitOpenGL(HWND window)
   ReleaseDC(window, dc);
 }
 
-void Win32FreeFile(void *memory)
+PLATFORM_FREE_FILE(Win32FreeFile)
 {
   if (memory)
 	{
@@ -202,6 +202,7 @@ int CALLBACK WinMain(HINSTANCE instance,
       engine_memory engineMemory = {};
       engineMemory.maccisDirectory = filePath;
       engineMemory.ReadFile = Win32ReadFile;
+      engineMemory.FreeFile = Win32FreeFile;
       engineMemory.storageSize = MB(64);
       engineMemory.storage = VirtualAlloc(0, engineMemory.storageSize, MEM_COMMIT, PAGE_READWRITE);
 
@@ -217,7 +218,8 @@ int CALLBACK WinMain(HINSTANCE instance,
         SwapBuffers(dc);
       }
 
-      VirtualFree(engineMemory.storage, 0, MEM_RELEASE);
+      Clean(engineMemory);
+
       ReleaseDC(windowHandle, dc);
     }
   }

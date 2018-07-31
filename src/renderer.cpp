@@ -9,7 +9,7 @@ void Clear()
 void Draw(vertex_array vertexArray, index_buffer indexBuffer, material mat)
 {
   mat.sh.bind();
-  mat.updateUniform();
+  mat.updateUniforms();
   vertexArray.bind();
   indexBuffer.bind();
   glDrawElements(GL_TRIANGLES, indexBuffer.count, GL_UNSIGNED_INT, NULL);

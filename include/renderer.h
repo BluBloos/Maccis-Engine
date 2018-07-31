@@ -21,6 +21,7 @@ struct buffer_layout
 {
   buffer_element elements[10];
   unsigned int elementCount;
+  unsigned int stride;
   void push(unsigned int count, GLenum type)
   {
     buffer_element element;
@@ -42,6 +43,7 @@ struct buffer_layout
     }
     if(elementCount < 10) {
       elements[elementCount++] = element;
+      stride += element.componentCount * element.componentSize;
     }
   }
 };
@@ -68,12 +70,14 @@ struct vertex_array
   {
     vertexBuffer = vb;
     vb.bind();
-    this->bind();
+    bind();
+    unsigned int offset = 0;
     for (unsigned int i = 0; i < bl.elementCount; i++)
     {
         buffer_element element = bl.elements[i];
-        glVertexAttribPointer(i, element.componentCount, element.type, element.normalized, element.componentSize * element.componentCount, 0);
+        glVertexAttribPointer(i, element.componentCount, element.type, element.normalized, bl.stride, (const void *)offset);
         glEnableVertexAttribArray(i);
+        offset += element.componentSize * element.componentCount;
     }
   }
 };
@@ -84,6 +88,18 @@ struct shader
   void bind()
   {
     glUseProgram(id);
+  }
+  int getUnfiformLocation(char *name)
+  {
+    return glGetUniformLocation(id, name);
+  }
+  void setUniform4f(char *name, float x, float y, float z, float w)
+  {
+    glUniform4f(getUnfiformLocation(name), x, y, z, w);
+  }
+  void setUniform1i(char *name, int i)
+  {
+    glUniform1i(getUnfiformLocation(name), i);
   }
 };
 
@@ -97,22 +113,37 @@ struct material_element
 struct material
 {
   shader sh;
-  material_element color;
+  vec4 color;
+  int texture;
   void setColor(float r, float g, float b, float a)
   {
-    color.element.x = r;
-    color.element.y = g;
-    color.element.z = b;
-    color.element.w = a;
-    if(!color.set){
-      color.location = glGetUniformLocation(sh.id, "ucolor");
-    }
-    color.set = true;
+    color.x = r;
+    color.y = g;
+    color.z = b;
+    color.w = a;
   }
-  void updateUniform()
+  void setTexture(unsigned int slot)
   {
-    if(color.set){
-      glUniform4f(color.location, color.element.x, color.element.y, color.element.z, color.element.z);
-    }
+    texture = slot;
+  }
+  void updateUniforms()
+  {
+    sh.setUniform4f("ucolor", color.x, color.y, color.z, color.w);
+    sh.setUniform1i("utexture", texture);
+  }
+};
+
+struct texture
+{
+  unsigned int id;
+  loaded_bitmap localTexture;
+  void bind(unsigned int slot)
+  {
+    glActiveTexture(GL_TEXTURE0 + slot);
+    glBindTexture(GL_TEXTURE_2D, id);
+  }
+  void del()
+  {
+    glDeleteTextures(1, &id);
   }
 };
