@@ -40,6 +40,9 @@ struct buffer_layout
         element.componentSize = sizeof(float);
       } break;
     }
+    if(elementCount < 10) {
+      elements[elementCount++] = element;
+    }
   }
 };
 
