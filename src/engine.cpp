@@ -185,7 +185,7 @@ mat4 CreateProjectionMatrix(float fov, float aspectRatio, float n, float f)
 INTERNAL camera CreateCamera(float width, float height, float fov)
 {
   camera cam;
-  cam.proj = CreateProjectionMatrix(fov, width / height, 1.0f, 5.0f);
+  cam.proj = CreateProjectionMatrix(fov, width / height, 1.0f, 100.0f);
   return cam;
 }
 
@@ -194,13 +194,13 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
   engine_state *engineState = (engine_state *)memory.storage;
   char stringBuffer[260];
 
-  engineState->defaultObject.vao = CreateVertexArray(); //make the vao
+  engineState->defaultObject.mesh.vao = CreateVertexArray(); //make the vao
   vertex_buffer vertexBuffer = CreateVertexBuffer(vertices, 16); //make the vertex buffer
   buffer_layout bufferLayout = CreateBufferLayout(); //make a buffer layout
   bufferLayout.push(2, GL_FLOAT); //describe the buffer layout
   bufferLayout.push(2, GL_FLOAT);
-  engineState->defaultObject.vao.addBuffer(vertexBuffer, bufferLayout); //describe the vao
-  engineState->defaultObject.indexBuffer = CreateIndexBuffer(indices, 6);
+  engineState->defaultObject.mesh.vao.addBuffer(vertexBuffer, bufferLayout); //describe the vao
+  engineState->defaultObject.mesh.indexBuffer = CreateIndexBuffer(indices, 6);
 
   read_file_result f1 = memory.ReadFile(BuildFilePath(memory.maccisDirectory, "src\\shader.vert", stringBuffer, 260));
   read_file_result f2 = memory.ReadFile(BuildFilePath(memory.maccisDirectory, "src\\shader.frag", stringBuffer, 260));
@@ -217,6 +217,16 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
   engineState->mainCamera = CreateCamera((float)width, (float)height, 90.0f);
   engineState->defaultObject.transform.setScale(1.0f, 1.0f, 1.0f);
   engineState->defaultObject.transform.setPosition(0.0f, 0.0f, -1.0f);
+
+  for (unsigned int i = 0; i < 10; i++)
+  {
+    engineState->dummyObjects[i].setScale(1.0f, 1.0f, 1.0f);
+  }
+
+  engineState->dummyObjects[0].setPosition(-10.0f, 0.0f, -25.0f);
+  engineState->dummyObjects[1].setPosition(+10.0f, 0.0f, -20.0f);
+  engineState->dummyObjects[2].setPosition(0.0f, -5.0f, -15.0f);
+  engineState->dummyObjects[3].setPosition(0.0f, +5.0f, -10.0f);
 }
 
 void Update(engine_memory memory)
@@ -228,6 +238,7 @@ void Update(engine_memory memory)
   engineState->defaultObject.transform.rotate(0.0f, 2.0f, 0.0f);
   engineState->defaultObject.transform.translate(0.0f, 0.0f, -0.01f);
   Draw(engineState->defaultObject, engineState->mainCamera);
+  DrawBatch(engineState->defaultObject.material, engineState->defaultObject.mesh, engineState->mainCamera, engineState->dummyObjects, 4);
 }
 
 void Clean(engine_memory memory)

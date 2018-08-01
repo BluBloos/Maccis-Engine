@@ -12,5 +12,6 @@ struct engine_state
   texture defaultTexture;
   game_object defaultObject;
   camera mainCamera;
+  transform dummyObjects[10];
   char r;
 };

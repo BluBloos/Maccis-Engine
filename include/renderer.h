@@ -236,10 +236,20 @@ struct texture
   }
 };
 
-struct game_object
+struct mesh
 {
   vertex_array vao;
   index_buffer indexBuffer;
+  void bind()
+  {
+    vao.bind();
+    indexBuffer.bind();
+  }
+};
+
+struct game_object
+{
+  mesh mesh;
   transform transform;
   material material;
   void bind()
@@ -247,7 +257,6 @@ struct game_object
     material.sh.bind();
     material.updateUniforms();
     transform.bindMatrix(material.sh);
-    vao.bind();
-    indexBuffer.bind();
+    mesh.bind();
   }
 };
