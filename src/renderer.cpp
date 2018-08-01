@@ -6,11 +6,9 @@ void Clear()
   glClear(GL_COLOR_BUFFER_BIT);
 }
 
-void Draw(vertex_array vertexArray, index_buffer indexBuffer, material mat)
+void Draw(game_object object, camera cam)
 {
-  mat.sh.bind();
-  mat.updateUniforms();
-  vertexArray.bind();
-  indexBuffer.bind();
-  glDrawElements(GL_TRIANGLES, indexBuffer.count, GL_UNSIGNED_INT, NULL);
+  object.bind();
+  cam.bind(object.material.sh);
+  glDrawElements(GL_TRIANGLES, object.indexBuffer.count, GL_UNSIGNED_INT, NULL);
 }

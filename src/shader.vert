@@ -5,8 +5,11 @@ layout(location = 1) in vec2 texCoord;
 
 out vec2 vTexCoord;
 
+uniform mat4 uproj;
+uniform mat4 umodel;
+
 void main()
 {
-  gl_Position = position;
+  gl_Position = uproj * umodel * vec4(position.x, position.y, 0, 1);
   vTexCoord = texCoord;
 };

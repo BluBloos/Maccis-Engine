@@ -89,17 +89,21 @@ struct shader
   {
     glUseProgram(id);
   }
-  int getUnfiformLocation(char *name)
+  int getUniformLocation(char *name)
   {
     return glGetUniformLocation(id, name);
   }
   void setUniform4f(char *name, float x, float y, float z, float w)
   {
-    glUniform4f(getUnfiformLocation(name), x, y, z, w);
+    glUniform4f(getUniformLocation(name), x, y, z, w);
   }
   void setUniform1i(char *name, int i)
   {
-    glUniform1i(getUnfiformLocation(name), i);
+    glUniform1i(getUniformLocation(name), i);
+  }
+  void setUniformMat4f(char *name, mat4 mat)
+  {
+    glUniformMatrix4fv(getUniformLocation(name), 1, GL_FALSE, &mat.matp[0]);
   }
 };
 
@@ -110,11 +114,95 @@ struct material_element
   int location;
 };
 
+struct transform
+{
+  mat4 matrix;
+  vec3 position;
+  vec3 scl;
+  vec3 rotation;
+  void bindMatrix(shader sh)
+  {
+    float array[] = {
+      scl.x,0,0,0,
+      0,scl.y,0,0,
+      0,0,scl.z,0,
+      0,0,0,1
+    };
+
+    mat4 bufferMatrix = {};
+    for (unsigned int x = 0; x < 16; x++)
+    {
+      bufferMatrix.matp[x] = array[x];
+    }
+
+    float array2[] = {
+      cosf(rotation.y * DEGREES_TO_RADIANS), 0, sinf(rotation.y * DEGREES_TO_RADIANS), 0,
+      0, 1, 0, 0,
+      -sinf(rotation.y * DEGREES_TO_RADIANS), 0, cosf(rotation.y * DEGREES_TO_RADIANS), 0,
+      0, 0, 0, 1
+    };
+
+    mat4 rotationMatrixY = {};
+    for (unsigned int x = 0; x < 16; x++)
+    {
+      rotationMatrixY.matp[x] = array2[x];
+    }
+
+    bufferMatrix = TransformMatrix(bufferMatrix, rotationMatrixY);
+    bufferMatrix.mat[3][0] = position.x;
+    bufferMatrix.mat[3][1] = position.y;
+    bufferMatrix.mat[3][2] = position.z;
+
+    sh.setUniformMat4f("umodel", bufferMatrix);
+  }
+  void translate(float dx, float dy, float dz)
+  {
+    position.x += dx; position.y += dy; position.z += dz;
+  }
+  void setPosition(float x, float y, float z)
+  {
+    position.x = x; position.y = y; position.z = z;
+  }
+  void scale(float x, float y, float z)
+  {
+    scl.x *= x; scl.y *= y; scl.z *= z;
+  }
+  void setScale(float x, float y, float z)
+  {
+    scl.x = x; scl.y = y; scl.z = z;
+  }
+  void setRotation(float x, float y, float z)
+  {
+    rotation.x = x; rotation.y = y; rotation.z = z;
+  }
+  void rotate(float dx, float dy, float dz)
+  {
+    rotation.x += dx; rotation.y += dy; rotation.z += dz;
+  }
+};
+
+struct camera
+{
+  mat4 view;
+  mat4 proj;
+  transform trans;
+  void updateMatrix()
+  {
+    //update the view matrix
+  }
+  void bind(shader sh)
+  {
+    sh.setUniformMat4f("uproj", proj);
+    //sh.setUniformMat4f("uview", view);
+  }
+};
+
 struct material
 {
   shader sh;
   vec4 color;
   int texture;
+  mat4 transform;
   void setColor(float r, float g, float b, float a)
   {
     color.x = r;
@@ -145,5 +233,21 @@ struct texture
   void del()
   {
     glDeleteTextures(1, &id);
+  }
+};
+
+struct game_object
+{
+  vertex_array vao;
+  index_buffer indexBuffer;
+  transform transform;
+  material material;
+  void bind()
+  {
+    material.sh.bind();
+    material.updateUniforms();
+    transform.bindMatrix(material.sh);
+    vao.bind();
+    indexBuffer.bind();
   }
 };

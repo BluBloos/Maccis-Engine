@@ -9,9 +9,8 @@ struct engine_memory
 
 struct engine_state
 {
-  vertex_array vertexArray;
-  index_buffer indexBuffer;
-  material defaultMaterial;
   texture defaultTexture;
+  game_object defaultObject;
+  camera mainCamera;
   char r;
 };

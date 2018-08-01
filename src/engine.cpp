@@ -3,6 +3,7 @@
 #include <renderer.cpp>
 #include <engine.h>
 
+
 INTERNAL float vertices[] = {
   -0.5f, -0.5f, 0.0f, 0.0f, //0
    0.5f, -0.5f, 1.0f, 0.0f, //1
@@ -158,38 +159,75 @@ texture CreateTexture(platform_read_file *ReadFile, platform_free_file *FreeFile
   return newTexture;
 }
 
-void Init(engine_memory memory)
+mat4 CreateProjectionMatrix(float fov, float aspectRatio, float n, float f)
+{
+  mat4 result = {};
+
+  float r = tanf(fov * DEGREES_TO_RADIANS / 2.0f) * n;
+  float l = -r;
+  float t = r / aspectRatio;
+  float b = -t;
+
+  float identity[] = {
+    2 * n / (r - l),0,0,0,
+    0,2 * n / (t -b),0,0,
+    (r + l) / (r -l), (t + b) / (t -b), -(f + n) / (f -n), -1,
+    0,0,-2 * f * n / (f -n),0
+  };
+  for (unsigned int x = 0; x < 16; x++)
+  {
+    result.matp[x] = identity[x];
+  }
+
+  return result;
+}
+
+INTERNAL camera CreateCamera(float width, float height, float fov)
+{
+  camera cam;
+  cam.proj = CreateProjectionMatrix(fov, width / height, 1.0f, 5.0f);
+  return cam;
+}
+
+void Init(engine_memory memory, unsigned int width, unsigned int height)
 {
   engine_state *engineState = (engine_state *)memory.storage;
   char stringBuffer[260];
 
-  engineState->vertexArray = CreateVertexArray(); //make the vao
+  engineState->defaultObject.vao = CreateVertexArray(); //make the vao
   vertex_buffer vertexBuffer = CreateVertexBuffer(vertices, 16); //make the vertex buffer
   buffer_layout bufferLayout = CreateBufferLayout(); //make a buffer layout
   bufferLayout.push(2, GL_FLOAT); //describe the buffer layout
   bufferLayout.push(2, GL_FLOAT);
-  engineState->vertexArray.addBuffer(vertexBuffer, bufferLayout); //describe the vao
-  engineState->indexBuffer = CreateIndexBuffer(indices, 6);
+  engineState->defaultObject.vao.addBuffer(vertexBuffer, bufferLayout); //describe the vao
+  engineState->defaultObject.indexBuffer = CreateIndexBuffer(indices, 6);
 
   read_file_result f1 = memory.ReadFile(BuildFilePath(memory.maccisDirectory, "src\\shader.vert", stringBuffer, 260));
   read_file_result f2 = memory.ReadFile(BuildFilePath(memory.maccisDirectory, "src\\shader.frag", stringBuffer, 260));
   shader sh = CreateShader((char *)f1.content, (char *)f2.content);
 
-  engineState->defaultMaterial.sh = sh;
-  engineState->defaultMaterial.setColor(0.5f, 0.3f, 1.0f, 1.0f);
+  engineState->defaultObject.material.sh = sh;
+  engineState->defaultObject.material.setColor(1.0f, 1.0f, 1.0f, 1.0f);
 
   engineState->defaultTexture = CreateTexture(memory.ReadFile, memory.FreeFile,
     BuildFilePath(memory.maccisDirectory, "res\\test.bmp", stringBuffer, 260));
   engineState->defaultTexture.bind(0);
-  engineState->defaultMaterial.setTexture(0);
+  engineState->defaultObject.material.setTexture(0);
+
+  engineState->mainCamera = CreateCamera((float)width, (float)height, 90.0f);
+  engineState->defaultObject.transform.setScale(1.0f, 1.0f, 1.0f);
+  engineState->defaultObject.transform.setPosition(0.0f, 0.0f, -1.0f);
 }
 
 void Update(engine_memory memory)
 {
   engine_state *engineState = (engine_state *)memory.storage;
   Clear();
-  engineState->defaultMaterial.setColor(engineState->r++ / 255.0f, 0.3f, 1.0f, 1.0f);
-  Draw(engineState->vertexArray, engineState->indexBuffer, engineState->defaultMaterial);
+  engineState->defaultObject.material.setColor(engineState->r++ / 255.0f, 1.0f, 1.0f, 1.0f);
+  //engineState->defaultObject.transform.scale(1.01f, 1.0f, 1.0f);
+  engineState->defaultObject.transform.rotate(0.0f, 2.0f, 0.0f);
+  engineState->defaultObject.transform.translate(0.0f, 0.0f, -0.01f);
+  Draw(engineState->defaultObject, engineState->mainCamera);
 }
 
 void Clean(engine_memory memory)

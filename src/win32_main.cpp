@@ -198,6 +198,7 @@ int CALLBACK WinMain(HINSTANCE instance,
 
       HDC dc = GetDC(windowHandle);
       RECT rect = {};
+      GetWindowRect(windowHandle, &rect);
 
       engine_memory engineMemory = {};
       engineMemory.maccisDirectory = filePath;
@@ -206,20 +207,16 @@ int CALLBACK WinMain(HINSTANCE instance,
       engineMemory.storageSize = MB(64);
       engineMemory.storage = VirtualAlloc(0, engineMemory.storageSize, MEM_COMMIT, PAGE_READWRITE);
 
-      Init(engineMemory);
+      Init(engineMemory, rect.right - rect.left, rect.bottom - rect.top);
 
       while(globalRunning)
 			{
         Win32ProcessMessages();
-        //GetWindowRect(windowHandle, &rect);
-
         Update(engineMemory);
-
         SwapBuffers(dc);
       }
 
       Clean(engineMemory);
-
       ReleaseDC(windowHandle, dc);
     }
   }
