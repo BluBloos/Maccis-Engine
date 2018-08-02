@@ -1,7 +1,3 @@
-#include <stdio.h>
-#include <fcntl.h>
-#include <io.h>
-
 // maximum mumber of lines the output console should have
 static const WORD MAX_CONSOLE_LINES = 500;
 
@@ -15,6 +11,7 @@ void Win32OpenConsole()
   // allocate a console for this app
   //https://docs.microsoft.com/en-us/windows/console/allocconsole
   AllocConsole();
+  SetConsoleTitleA("Maccis Console");
 
   // set the screen buffer to be big enough to let us scroll text
   //https://docs.microsoft.com/en-us/windows/console/getconsolescreenbufferinfo
@@ -26,9 +23,16 @@ void Win32OpenConsole()
   //https://msdn.microsoft.com/en-us/library/bdts1c9x.aspx
   //https://msdn.microsoft.com/en-us/library/88k7d7a7.aspx
   lStdHandle = (long)GetStdHandle(STD_OUTPUT_HANDLE);
-  hConHandle = _open_osfhandle(lStdHandle, _O_TEXT);
+  hConHandle = _open_osfhandle(lStdHandle, _O_TEXT); //convert windows handle to c runtime handle
   fp = _fdopen( hConHandle, "w" );
   *stdout = *fp;
   //setvbuf( stdout, NULL, _IONBF, 0 ); //associate no buffer
   freopen_s( &fp, "CONOUT$", "w", stdout);
+
+  lStdHandle = (long)GetStdHandle(STD_ERROR_HANDLE);
+  hConHandle = _open_osfhandle(lStdHandle, _O_TEXT);
+  fp = _fdopen( hConHandle, "w" );
+  *stderr = *fp;
+  //setvbuf( stdout, NULL, _IONBF, 0 ); //associate no buffer
+  freopen_s(&fp, "CONOUT$" , "w" , stderr);
 }

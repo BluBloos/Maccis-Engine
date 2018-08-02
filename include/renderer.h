@@ -7,6 +7,10 @@ struct vertex_buffer
   {
     glBindBuffer(GL_ARRAY_BUFFER, id);
   }
+  void unbind()
+  {
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+  }
 };
 
 struct buffer_element
@@ -62,13 +66,22 @@ struct vertex_array
 {
   unsigned int id;
   vertex_buffer vertexBuffer;
+  buffer_layout bufferLayout;
   void bind()
   {
     glBindVertexArray(id);
+    for (unsigned int i = 0; i < bufferLayout.elementCount; i++)
+    {
+      glEnableVertexAttribArray(i);
+    }
+  }
+  void unbind()
+  {
+    glBindVertexArray(0);
   }
   void addBuffer(vertex_buffer vb, buffer_layout bl)
   {
-    vertexBuffer = vb;
+    vertexBuffer = vb; bufferLayout = bl;
     vb.bind();
     bind();
     unsigned int offset = 0;
@@ -76,9 +89,11 @@ struct vertex_array
     {
         buffer_element element = bl.elements[i];
         glVertexAttribPointer(i, element.componentCount, element.type, element.normalized, bl.stride, (const void *)offset);
-        glEnableVertexAttribArray(i);
+        //glEnableVertexAttribArray(i);
         offset += element.componentSize * element.componentCount;
     }
+    vb.unbind();
+    unbind();
   }
 };
 
@@ -105,13 +120,6 @@ struct shader
   {
     glUniformMatrix4fv(getUniformLocation(name), 1, GL_FALSE, &mat.matp[0]);
   }
-};
-
-struct material_element
-{
-  vec4 element;
-  bool set;
-  int location;
 };
 
 struct transform
@@ -202,7 +210,6 @@ struct material
   shader sh;
   vec4 color;
   int texture;
-  mat4 transform;
   void setColor(float r, float g, float b, float a)
   {
     color.x = r;

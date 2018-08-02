@@ -11,6 +11,28 @@
 #define Assert(Expression)
 #endif
 
+INTERNAL void GLClearError()
+{
+  while(glGetError() != GL_NO_ERROR);
+}
+
+INTERNAL bool GLCheckError(char *function, char *file, int line)
+{
+  bool result = true;
+  while(GLenum error = glGetError())
+  {
+    printf("GL_ERROR: %d\nFUNCTION: %s\nFILE: %s\nLINE: %d", error, function, file, line);
+    result = false;
+  }
+  return result;
+}
+
+#ifdef DEBUG
+#define GL_CALL(code) GLClearError(); code; Assert(GLCheckError(#code, __FILE__, __LINE__));
+#else
+#define GL_CALL(code) code;
+#endif
+
 struct read_file_result
 {
   void *content;
@@ -23,33 +45,31 @@ struct file_path
   unsigned int length;
 };
 
-#include <platform.h>
-
-struct loaded_bitmap
+struct memory_arena
 {
-  unsigned int scale;
-  unsigned int height;
-  unsigned int width;
-  unsigned int *pixelPointer;
-  void *container;
-  void free(platform_free_file FreeFile)
+  void *memory;
+  unsigned int size;
+  unsigned int used;
+  void init(void *data, unsigned int s)
   {
-    FreeFile(container);
+    size = s;
+    memory = data;
+  }
+  void *push(unsigned int amount)
+  {
+    if ( !(amount > size - used) ) //we can push!
+    {
+      void *base = (char *)memory + used;
+      used += amount;
+      return base;
+    } else
+    {
+      return NULL; //we return null when there is no more space!
+    }
   }
 };
 
-#pragma pack(push, 1)
-struct bitmap_header
-{
-	unsigned short FileType;     /* File type, always 4D42h ("BM") */
-	unsigned int FileSize;     /* Size of the file in bytes */
-	unsigned short Reserved1;    /* Always 0 */
-	unsigned short Reserved2;    /* Always 0 */
-	unsigned int BitmapOffset; /* Starting position of image data in bytes */
-	unsigned int size;            /* Size of this header in bytes */
-	int Width;           /* Image width in pixels */
-	int Height;          /* Image height in pixels */
-	unsigned short Planes;          /* Number of color planes */
-	unsigned short BitsPerPixel;    /* Number of bits per pixel */
-};
-#pragma pack(pop)
+#include <platform.h>
+#include <maccis_io.h>
+#include <maccis_strings.h>
+#include <io.cpp>

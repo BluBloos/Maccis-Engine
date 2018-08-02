@@ -16,36 +16,6 @@ INTERNAL unsigned int indices[] = {
   2, 3, 0
 };
 
-void CatStrings(int sourceACount, char *sourceA, int sourceBCount,
- char *sourceB, int destCount, char *dest)
-{
-	for (int index = 0; index < sourceACount; index++)
-	{
-		*dest++ = *sourceA++;
-	}
-	for (int index = 0; index < sourceBCount; index++)
-	{
-		*dest++ = *sourceB++;
-	}
-	*dest = 0;
-}
-
-unsigned int GetStringLength(char *string)
-{
-	unsigned int count = 0;
-	while (*string != 0)
-	{
-		string++; count++;
-	}
-	return count;
-}
-
-char *BuildFilePath(file_path fpath, char *fileName, char *buffer, int bufferLength)
-{
-	CatStrings(fpath.length, fpath.path, GetStringLength(fileName), fileName, bufferLength, buffer);
-  return buffer;
-}
-
 INTERNAL unsigned int CompileShader(unsigned int type, char *shader)
 {
   unsigned int id = glCreateShader(type);
@@ -56,12 +26,13 @@ INTERNAL unsigned int CompileShader(unsigned int type, char *shader)
   glGetShaderiv(id, GL_COMPILE_STATUS, &result);
   if(result == GL_FALSE)
   {
+    //TODO(Noah): remove _alloca and add logging functions provided by the platform layer
     int length;
     glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
     char *message = (char *)_alloca(length * sizeof(char));
     glGetShaderInfoLog(id, length, &length, message);
-    //std::cout << "Failed to comile shader!" << std::endl;
-    //std::cout << message << std::endl;
+    printf("Failed to comile shader!\n");
+    printf("%s\n", message);
     glDeleteShader(id);
     return 0;
   }
@@ -91,9 +62,9 @@ INTERNAL shader CreateShader(char *vertexShader, char *fragmentShader)
   return s;
 }
 
-vertex_buffer CreateVertexBuffer(float *data, unsigned int count)
+vertex_buffer CreateVertexBuffer(float *data, unsigned int floatCount)
 {
-  vertex_buffer buffer; buffer.elementSize = sizeof(float); buffer.size = buffer.elementSize * count;
+  vertex_buffer buffer = {}; buffer.elementSize = sizeof(float); buffer.size = buffer.elementSize * floatCount;
   glGenBuffers(1, &buffer.id);
   glBindBuffer(GL_ARRAY_BUFFER, buffer.id); //select the buffer
   glBufferData(GL_ARRAY_BUFFER, buffer.size, data, GL_STATIC_DRAW);
@@ -101,9 +72,9 @@ vertex_buffer CreateVertexBuffer(float *data, unsigned int count)
   return buffer;
 }
 
-index_buffer CreateIndexBuffer(unsigned int *data, unsigned int count)
+index_buffer CreateIndexBuffer(unsigned int *data, unsigned int indexCount)
 {
-  index_buffer buffer; buffer.count = count;
+  index_buffer buffer = {}; buffer.count = indexCount;
   glGenBuffers(1, &buffer.id);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.id);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, buffer.count * sizeof(unsigned int), data, GL_STATIC_DRAW);
@@ -113,7 +84,7 @@ index_buffer CreateIndexBuffer(unsigned int *data, unsigned int count)
 
 vertex_array CreateVertexArray()
 {
-  vertex_array vertexArray;
+  vertex_array vertexArray = {};
   glGenVertexArrays(1, &vertexArray.id);
   return vertexArray;
 }
@@ -122,22 +93,6 @@ buffer_layout CreateBufferLayout()
 {
   buffer_layout bufferLayout = {};
   return bufferLayout;
-}
-
-loaded_bitmap LoadBMP(platform_read_file *ReadFile, char *path)
-{
-	loaded_bitmap bitmap = {};
-	bitmap.scale = 1;
-	read_file_result fileResult = ReadFile(path);
-	if (fileResult.contentSize != 0)
-	{
-		bitmap_header *header = (bitmap_header *)fileResult.content;
-		bitmap.pixelPointer = (unsigned int *) ( (unsigned char *)fileResult.content + header->BitmapOffset );
-		bitmap.height = header->Height;
-		bitmap.width = header->Width;
-    bitmap.container = fileResult.content;
-	}
-	return bitmap;
 }
 
 texture CreateTexture(platform_read_file *ReadFile, platform_free_file *FreeFile, char *path)
@@ -189,9 +144,34 @@ INTERNAL camera CreateCamera(float width, float height, float fov)
   return cam;
 }
 
+game_object GameObjectFromRawModel(raw_model model, shader sh)
+{
+  game_object gameObject = {};
+
+  gameObject.mesh.vao = CreateVertexArray(); //make the vao
+  vertex_buffer vertexBuffer = CreateVertexBuffer((float *)model.mem, model.vertexCount * 8); //make the vertex buffer
+  buffer_layout bufferLayout = CreateBufferLayout(); //make a buffer layout
+
+  bufferLayout.push(3, GL_FLOAT); //describe the buffer layout
+  bufferLayout.push(2, GL_FLOAT);
+  bufferLayout.push(3, GL_FLOAT);
+
+  gameObject.mesh.vao.addBuffer(vertexBuffer, bufferLayout); //describe the vao
+  gameObject.mesh.indexBuffer = CreateIndexBuffer((unsigned int *)model.mem + model.indicesOffset, model.indexCount);
+
+  gameObject.material.sh = sh;
+  gameObject.material.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+  gameObject.material.setTexture(0);
+  gameObject.transform.setScale(1.0f, 1.0f, 1.0f);
+  gameObject.transform.setPosition(0.0f, 0.0f, -1.0f);
+
+  return gameObject;
+}
+
 void Init(engine_memory memory, unsigned int width, unsigned int height)
 {
   engine_state *engineState = (engine_state *)memory.storage;
+  engineState->memoryArena.init((char *)memory.storage + sizeof(engine_state), memory.storageSize - sizeof(engine_state));
   char stringBuffer[260];
 
   engineState->defaultObject.mesh.vao = CreateVertexArray(); //make the vao
@@ -227,6 +207,9 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
   engineState->dummyObjects[1].setPosition(+10.0f, 0.0f, -20.0f);
   engineState->dummyObjects[2].setPosition(0.0f, -5.0f, -15.0f);
   engineState->dummyObjects[3].setPosition(0.0f, +5.0f, -10.0f);
+
+  engineState->suzanne = GameObjectFromRawModel(LoadOBJ(engineState->memoryArena,
+    BuildFilePath(memory.maccisDirectory, "res\\monkey.obj", stringBuffer, 260)), sh);
 }
 
 void Update(engine_memory memory)
@@ -238,7 +221,9 @@ void Update(engine_memory memory)
   engineState->defaultObject.transform.rotate(0.0f, 2.0f, 0.0f);
   engineState->defaultObject.transform.translate(0.0f, 0.0f, -0.01f);
   Draw(engineState->defaultObject, engineState->mainCamera);
-  DrawBatch(engineState->defaultObject.material, engineState->defaultObject.mesh, engineState->mainCamera, engineState->dummyObjects, 4);
+  //DrawBatch(engineState->defaultObject.material, engineState->defaultObject.mesh, engineState->mainCamera, engineState->dummyObjects, 4);
+  engineState->suzanne.transform.translate(0.0f, 0.0f, -0.01f);
+  DrawNoIndex(engineState->suzanne, engineState->mainCamera);
 }
 
 void Clean(engine_memory memory)

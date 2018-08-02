@@ -1,12 +1,18 @@
 #include <Windows.h>
 #include <malloc.h>
-#include <glew.h>
-#include <gl.h>
 
+#include <vendor/glew.h>
+#include <vendor/gl.h>
+
+#include <maccis_system.h>
 #include <engine.cpp>
 #include <win32_console.cpp>
 
+typedef BOOL WINAPI wgl_swap_interval_ext(int interval);
+
+//setup global variables
 INTERNAL bool globalRunning = true;
+INTERNAL wgl_swap_interval_ext *wglSwapInterval;
 
 LRESULT CALLBACK Win32WindowProc(HWND window,
   UINT message,
@@ -56,17 +62,6 @@ void Win32ProcessMessages()
 
 }
 
-void APIENTRY DebugMessageCallback(GLenum source,
-  GLenum type,
-  GLuint id,
-  GLenum severity,
-  GLsizei length,
-  const GLchar *message,
-  void *userParam)
-{
-  printf("%s\n", message);
-}
-
 void Win32InitOpenGL(HWND window)
 {
   HDC dc = GetDC(window);
@@ -94,7 +89,12 @@ void Win32InitOpenGL(HWND window)
       //TODO(Noah): something is seriously wrong
     }
 
-    glDebugMessageCallback((GLDEBUGPROC)DebugMessageCallback, NULL);
+    //setup VSYNC, even though it's on by default :)
+    wglSwapInterval = (wgl_swap_interval_ext *)wglGetProcAddress("wglSwapIntervalEXT");
+    if(wglSwapInterval)
+    {
+      wglSwapInterval(1);
+    }
   }else
   {
     //TODO(Noah): opengl did not initialize
@@ -171,6 +171,8 @@ int CALLBACK WinMain(HINSTANCE instance,
   Win32OpenConsole();
   unsigned int version = 1;
   printf("Maccis-Engine version %d!\n", version);
+  fprintf(stdout, "stdout initialized\n");
+  fprintf(stderr, "stderr initialized\n");
 
   char stringBuffer[256];
   file_path filePath = {}; filePath.length = MAX_PATH;

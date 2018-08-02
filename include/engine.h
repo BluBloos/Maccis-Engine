@@ -9,8 +9,10 @@ struct engine_memory
 
 struct engine_state
 {
+  memory_arena memoryArena;
   texture defaultTexture;
   game_object defaultObject;
+  game_object suzanne;
   camera mainCamera;
   transform dummyObjects[10];
   char r;
