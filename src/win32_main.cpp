@@ -5,6 +5,7 @@
 #include <vendor/gl.h>
 
 #include <maccis_system.h>
+#include <maccis.h> //Maccis should be global to the platform and the engine!
 #include <engine.cpp>
 #include <win32_console.cpp>
 
@@ -13,6 +14,87 @@ typedef BOOL WINAPI wgl_swap_interval_ext(int interval);
 //setup global variables
 INTERNAL bool globalRunning = true;
 INTERNAL wgl_swap_interval_ext *wglSwapInterval;
+INTERNAL user_input globalUserInput;
+
+void Win32PrepareInput()
+{
+  for (unsigned int i = 0; i < MAX_KEY_STATES; i++ )
+  {
+    globalUserInput.keyStates[i].halfTransitionCount = 0;
+  }
+}
+
+inline void Win32ProcessKeyboardKey(unsigned int key, bool down)
+{
+  if (globalUserInput.keyStates[key].endedDown != down)
+  {
+    globalUserInput.keyStates[key].halfTransitionCount++;
+    globalUserInput.keyStates[key].endedDown = down;
+  }
+}
+
+void Win32ProccessKeyboardMessage(unsigned int vkCode, bool down)
+{
+  switch (vkCode)
+  {
+    case 'W':
+    {
+      Win32ProcessKeyboardKey(MACCIS_KEY_W, down);
+    } break;
+    case 'A':
+    {
+      Win32ProcessKeyboardKey(MACCIS_KEY_A, down);
+    } break;
+    case 'S':
+    {
+      Win32ProcessKeyboardKey(MACCIS_KEY_S, down);
+    } break;
+    case 'D':
+    {
+      Win32ProcessKeyboardKey(MACCIS_KEY_D, down);
+    } break;
+    case VK_SPACE:
+    {
+      Win32ProcessKeyboardKey(MACCIS_KEY_SPACE, down);
+    } break;
+    case VK_ESCAPE:
+    {
+      Win32ProcessKeyboardKey(MACCIS_KEY_ESCAPE, down);
+    } break;
+    case VK_SHIFT:
+    {
+      Win32ProcessKeyboardKey(MACCIS_KEY_SHIFT, down);
+    } break;
+    case VK_RETURN: //enter key
+    {
+      Win32ProcessKeyboardKey(MACCIS_KEY_ENTER, down);
+    } break;
+    case VK_CONTROL:
+    {
+      Win32ProcessKeyboardKey(MACCIS_KEY_CONTROL, down);
+    } break;
+    case VK_MENU: //alt key
+    {
+      Win32ProcessKeyboardKey(MACCIS_KEY_ALT, down);
+    } break;
+    case VK_LEFT: //left arrow key
+    {
+      Win32ProcessKeyboardKey(MACCIS_KEY_LEFT, down);
+    } break;
+    case VK_RIGHT: //right arrow key
+    {
+      Win32ProcessKeyboardKey(MACCIS_KEY_RIGHT, down);
+    } break;
+    case VK_UP: //up arrow key
+    {
+      Win32ProcessKeyboardKey(MACCIS_KEY_UP, down);
+    } break;
+    case VK_DOWN: //down arrow key
+    {
+      Win32ProcessKeyboardKey(MACCIS_KEY_DOWN, down);
+    } break;
+  }
+}
 
 LRESULT CALLBACK Win32WindowProc(HWND window,
   UINT message,
@@ -27,19 +109,26 @@ LRESULT CALLBACK Win32WindowProc(HWND window,
 		{
 			//TODO(Noah): Handle as error
 			globalRunning = false;
-		}
-		break;
+		} break;
 		case WM_CLOSE:
 		{
 			//TODO(Noah): Handle as message to user
 			globalRunning = false;
-		}
-		break;
+		} break;
+    case WM_KEYUP:
+    {
+      unsigned int vkCode = wParam;
+      Win32ProccessKeyboardMessage(vkCode, false);
+    } break;
+    case WM_KEYDOWN:
+    {
+      unsigned int vkCode = wParam;
+      Win32ProccessKeyboardMessage(vkCode, true);
+    };
 		default:
 		{
 			result = DefWindowProc(window,message,wParam,lParam);
-		}
-		break;
+		} break;
 	}
 
 	return result;
@@ -50,13 +139,17 @@ void Win32ProcessMessages()
 	MSG message;
 	while(PeekMessage(&message,NULL,0,0,PM_REMOVE))
 	{
-		if(message.message == WM_QUIT)
-		{
-			globalRunning = false;
-		} else
+    switch (message.message)
     {
-      TranslateMessage(&message);
-      DispatchMessage(&message);
+      case WM_QUIT:
+      {
+        globalRunning = false;
+      } break;
+      default:
+      {
+        TranslateMessage(&message);
+        DispatchMessage(&message);
+      } break;
     }
 	}
 
@@ -203,6 +296,7 @@ int CALLBACK WinMain(HINSTANCE instance,
       GetWindowRect(windowHandle, &rect);
 
       engine_memory engineMemory = {};
+
       engineMemory.maccisDirectory = filePath;
       engineMemory.ReadFile = Win32ReadFile;
       engineMemory.FreeFile = Win32FreeFile;
@@ -214,8 +308,9 @@ int CALLBACK WinMain(HINSTANCE instance,
       while(globalRunning)
 			{
         Win32ProcessMessages();
-        Update(engineMemory);
+        Update(engineMemory, globalUserInput);
         SwapBuffers(dc);
+        Win32PrepareInput();
       }
 
       Clean(engineMemory);

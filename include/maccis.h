@@ -1,5 +1,6 @@
 #define INTERNAL static
 #define PERSISTENT static
+#define MAX_KEY_STATES 26
 
 #define KB(number) number * 1000;
 #define MB(number) KB(number * 1000);
@@ -32,6 +33,26 @@ INTERNAL bool GLCheckError(char *function, char *file, int line)
 #else
 #define GL_CALL(code) code;
 #endif
+
+enum enum_key_state
+{
+  MACCIS_KEY_W, MACCIS_KEY_A, MACCIS_KEY_S,
+  MACCIS_KEY_D, MACCIS_KEY_SPACE, MACCIS_KEY_ESCAPE,
+  MACCIS_KEY_SHIFT, MACCIS_KEY_ENTER, MACCIS_KEY_CONTROL,
+  MACCIS_KEY_ALT, MACCIS_KEY_LEFT, MACCIS_KEY_RIGHT,
+  MACCIS_KEY_UP, MACCIS_KEY_DOWN
+};
+
+struct key_state
+{
+  bool endedDown;
+  unsigned int halfTransitionCount;
+};
+
+struct user_input
+{
+  key_state keyStates[MAX_KEY_STATES];
+};
 
 struct read_file_result
 {

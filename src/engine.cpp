@@ -1,4 +1,3 @@
-#include <maccis.h>
 #include <maccis_math.h>
 #include <renderer.cpp>
 #include <engine.h>
@@ -212,7 +211,7 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
     BuildFilePath(memory.maccisDirectory, "res\\monkey.obj", stringBuffer, 260)), sh);
 }
 
-void Update(engine_memory memory)
+void Update(engine_memory memory, user_input userInput)
 {
   engine_state *engineState = (engine_state *)memory.storage;
   Clear();
