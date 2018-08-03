@@ -1,15 +1,5 @@
 import sys
 
-class vertex:
-    def __init__(self, position, textureCoord, normal):
-        self.position = position
-        self.textureCoord = textureCoord
-        self.normal = normal
-    def compare(self, v):
-        if self.position.compare(v.position) and self.textureCoord.compare(v.textureCoord) and self.normal.compare(v.normal):
-            return True
-        return False
-
 class vec3:
     def __init__(self, x, y, z):
         self.x = x
@@ -29,72 +19,82 @@ class vec2:
           return True
         return False
 
-def queryVertices(vertices, vertex):
-  pass
-
 def obj(fileName):
-    sys.stdout = open("plog.txt", "w")
-    sys.stdout.write("stdout redirected" + "\n")
+    #redirect stdout to a file
+    sys.stdout = open("pylog.txt", "w")
+    sys.stdout.write("stdout redirected\n")
 
+    #read from the file
     file = open(fileName, "r")
     lines = file.readlines()
     file.close()
 
-    vertices = []
-    textureCoords = []
+    #initialize variables needed for execution
+    textureCoordinates = []
     normals = []
 
-    vertexObjects = []
-
+    vertexCount = 0
+    indicesCount = 0
     floatBuffer = []
     indices = []
-    vertexCount = 0
 
-    floatBuffer.append(0)
-
+    #parse the file
     for line in lines:
-        splt = line.split(" ")
-        if splt[0] == 'v':
-            vertices.append(vec3(float(splt[1]), float(splt[2]), float(splt[3])))
-        elif splt[0] == 'vt':
-            textureCoords.append(vec2(float(splt[1]), float(splt[2])))
-        elif splt[0] == 'vn':
-            normals.append(vec3(float(splt[1]), float(splt[2]), float(splt[3])))
-        elif splt[0] == 'f':
+        splitLine = line.split(" ")
+
+        #the line specifies a vertex
+        if splitLine[0] == 'v':
+            #append the vertex
+            floatBuffer.append( float(splitLine[1]) )
+            floatBuffer.append( float(splitLine[2]) )
+            floatBuffer.append( float(splitLine[3]) )
+            vertexCount += 1
+
+            #append padding floats
+            floatBuffer.append(0.0)
+            floatBuffer.append(0.0)
+            floatBuffer.append(0.0)
+            floatBuffer.append(0.0)
+            floatBuffer.append(0.0)
+
+
+        #the line specifies a texture coordinate
+        elif splitLine[0] == 'vt':
+            #append the texture coordinate to the textureCoordinates array
+            textureCoordinates.append( vec2( float(splitLine[1]), float(splitLine[2]) ) )
+
+        #the line specifies a vertex normal
+        elif splitLine[0] == 'vn':
+            #append the vertex normal to the normals array
+            normals.append( vec3( float(splitLine[1]), float(splitLine[2]), float(splitLine[3]) ) )
+
+        #the line specifies a face
+        elif splitLine[0] == 'f':
             for i in range(3):
-                vertex = splt[i + 1].split("/")
+                vertex = splitLine[i + 1].split('/')
+                vertexLocation = (int(vertex[0]) - 1) * 8
+                normalLocation = int(vertex[2]) -1
 
-                tempTextureCoord = vec2(0, 0)
+                #test if the vertex contains a texture coordinate
                 if vertex[1] != '':
-                    tempTextureCoord[0] = (textureCoords[int(vertex[1]) - 1].x)
-                    tempTextureCoord[1] = (textureCoords[int(vertex[1]) - 1].y)
+                    textureCoordinateLocation = int(vertex[1]) - 1
+                    floatBuffer[ vertexLocation + 3 ] = textureCoordinates[textureCoordinateLocation].x
+                    floatBuffer[ vertexLocation + 4 ] = textureCoordinates[textureCoordinateLocation].y
 
-                vertexObject = vertex( vertices[int(vertex[0]) - 1], tempTextureCoord,  normals[int(vertex[2]) - 1])
-                queryResult = queryVertices(vertexObjects, vertexObject)
-                if queryResult.good:
-                    #below appends a vertex to the floatBuffer
-                    #append position of vertex 1
-                    floatBuffer.append(vertices[int(vertex[0]) - 1].x)
-                    floatBuffer.append(vertices[int(vertex[0]) - 1].y)
-                    floatBuffer.append(vertices[int(vertex[0]) - 1].z)
+                #write the normals
+                floatBuffer[ vertexLocation + 5 ] = normals[normalLocation].x
+                floatBuffer[ vertexLocation + 6 ] = normals[normalLocation].y
+                floatBuffer[ vertexLocation + 7 ] = normals[normalLocation].z
 
-                    #append texture coordinates of vertex 1
-                    floatBuffer.append(tempTextureCoord.x)
-                    floatBuffer.append(tempTextureCoord.y)
+                #write into the indices
+                indices.append( int(vertex[0]) - 1 )
+                indicesCount += 1
 
-                    #append normals of vertex 1
-                    floatBuffer.append(normals[int(vertex[2]) - 1].x)
-                    floatBuffer.append(normals[int(vertex[2]) - 1].y)
-                    floatBuffer.append(normals[int(vertex[2]) - 1].z)
-
-                indices.append(queryResult) #the query result will tell us the index of the requested vertex
-                vertexCount += 1 #add one to the vertexCount because we added more vertices
-
-    for index in indices:
-        floatBuffer.append(index)
-
-    floatBuffer[0] = vertexCount
-
+    #debug logs
+    print("vertexCount: " + str(vertexCount) + "\n")
+    print("indicesCount: " + str(indicesCount) + "\n")
     print(floatBuffer)
+    print(indices)
+
     sys.stdout.close()
-    return [floatBuffer, indices]
+    return [vertexCount, indicesCount, floatBuffer, indices]

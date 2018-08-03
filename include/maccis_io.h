@@ -13,8 +13,8 @@ struct loaded_bitmap
 
 struct raw_model
 {
-  void *mem;
-  unsigned int indicesOffset;
+  void *vertices;
+  void *indices;
   unsigned int vertexCount;
   unsigned int indexCount;
 };

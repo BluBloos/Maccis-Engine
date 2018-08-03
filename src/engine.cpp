@@ -149,7 +149,7 @@ game_object GameObjectFromRawModel(raw_model model, shader sh)
   game_object gameObject = {};
 
   gameObject.mesh.vao = CreateVertexArray(); //make the vao
-  vertex_buffer vertexBuffer = CreateVertexBuffer((float *)model.mem, model.vertexCount * 8); //make the vertex buffer
+  vertex_buffer vertexBuffer = CreateVertexBuffer((float *)model.vertices, model.vertexCount * 8); //make the vertex buffer
   buffer_layout bufferLayout = CreateBufferLayout(); //make a buffer layout
 
   bufferLayout.push(3, GL_FLOAT); //describe the buffer layout
@@ -157,7 +157,7 @@ game_object GameObjectFromRawModel(raw_model model, shader sh)
   bufferLayout.push(3, GL_FLOAT);
 
   gameObject.mesh.vao.addBuffer(vertexBuffer, bufferLayout); //describe the vao
-  gameObject.mesh.indexBuffer = CreateIndexBuffer((unsigned int *)model.mem + model.indicesOffset, model.indexCount);
+  gameObject.mesh.indexBuffer = CreateIndexBuffer((unsigned int *)model.indices, model.indexCount);
 
   gameObject.material.sh = sh;
   gameObject.material.setColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -223,7 +223,7 @@ void Update(engine_memory memory)
   Draw(engineState->defaultObject, engineState->mainCamera);
   //DrawBatch(engineState->defaultObject.material, engineState->defaultObject.mesh, engineState->mainCamera, engineState->dummyObjects, 4);
   engineState->suzanne.transform.translate(0.0f, 0.0f, -0.01f);
-  DrawNoIndex(engineState->suzanne, engineState->mainCamera);
+  Draw(engineState->suzanne, engineState->mainCamera);
 }
 
 void Clean(engine_memory memory)

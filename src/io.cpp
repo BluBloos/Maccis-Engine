@@ -1,5 +1,6 @@
 #include <vendor/python/Python.h>
 #define PY_FLOAT_FROM_LIST(list, index) (float)PyFloat_AsDouble(PyList_GetItem(list, index))
+#define PY_INT_FROM_LIST(list, index) (unsigned int)PyInt_AsLong(PyList_GetItem(list, index))
 
 loaded_bitmap LoadBMP(platform_read_file *ReadFile, char *path)
 {
@@ -82,6 +83,7 @@ raw_model LoadOBJ(memory_arena Arena, char *path)
 
   PyObject *pName, *pModule, *pFunc;
   PyObject *pArgs, *pValue;
+	PyObject *vertices, *indices;
 
   Py_Initialize(); //initialize the python interpreter
   pName = PyString_FromString("load_obj");
@@ -102,25 +104,37 @@ raw_model LoadOBJ(memory_arena Arena, char *path)
       if (pValue != NULL)
       {
         printf("Function returned succesfully\n");
-
         if(PyList_Check(pValue))
         {
-          printf("Return value is a list\n");
-          unsigned int listSize = PyList_Size(pValue);
+					vertices = PyList_GetItem(pValue, 2);
+					indices = PyList_GetItem(pValue, 3);
 
-          model.mem = Arena.push( (listSize - 1) * sizeof(float) );
-          model.vertexCount = PY_FLOAT_FROM_LIST(pValue, 0);
-          model.indexCount = model.vertexCount;
-          model.indicesOffset = model.vertexCount *  8; //offset by amount of floats
+					vertices = PyList_GetItem(pValue, 2);
+					indices = PyList_GetItem(pValue, 3);
 
-          float *data = (float *)model.mem;
-          for (unsigned int i = 1; i < listSize - 1; i++)
+					model.vertexCount = PY_INT_FROM_LIST(pValue, 0);
+					model.indexCount = PY_INT_FROM_LIST(pValue, 1);
+
+          model.vertices = Arena.push( model.vertexCount * 8 * sizeof(float) );
+					model.indices = Arena.push( model.indexCount * sizeof(unsigned int) );
+
+          float *vp = (float *)model.vertices;
+          for (unsigned int i = 0; i < model.vertexCount * 8; i++)
           {
-            *data++ = PY_FLOAT_FROM_LIST(pValue, i);
+            *vp++ = PY_FLOAT_FROM_LIST(vertices, i);
+          }
+
+					unsigned int *ip = (unsigned int *)model.indices;
+          for (unsigned int i = 0; i < model.indexCount; i++)
+          {
+            *ip++ = PY_INT_FROM_LIST(indices, i);
           }
         }
 
-        Py_DECREF(pValue); //kill that shit if its not null
+				//Kill everything
+        Py_DECREF(pValue);
+				Py_XDECREF(vertices);
+				Py_XDECREF(indices);
       } else
       {
         //kill everything
