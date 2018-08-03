@@ -124,11 +124,10 @@ struct shader
 
 struct transform
 {
-  mat4 matrix;
   vec3 position;
   vec3 scl;
   vec3 rotation;
-  void bindMatrix(shader sh)
+  mat4 buildMatrix()
   {
     float array[] = {
       scl.x,0,0,0,
@@ -161,7 +160,7 @@ struct transform
     bufferMatrix.mat[3][1] = position.y;
     bufferMatrix.mat[3][2] = position.z;
 
-    sh.setUniformMat4f("umodel", bufferMatrix);
+    return bufferMatrix;
   }
   void translate(float dx, float dy, float dz)
   {
@@ -191,17 +190,29 @@ struct transform
 
 struct camera
 {
-  mat4 view;
+  //mat4 view;
   mat4 proj;
   transform trans;
-  void updateMatrix()
-  {
-    //update the view matrix
-  }
   void bind(shader sh)
   {
     sh.setUniformMat4f("uproj", proj);
-    //sh.setUniformMat4f("uview", view);
+    sh.setUniformMat4f("uview", trans.buildMatrix());
+  }
+  void translate(float dx, float dy, float dz)
+  {
+    trans.position.x -= dx; trans.position.y -= dy; trans.position.z -= dz;
+  }
+  void setPosition(float x, float y, float z)
+  {
+    trans.position.x = -x; trans.position.y = -y; trans.position.z = -z;
+  }
+  void setRotation(float x, float y, float z)
+  {
+    trans.rotation.x = -x; trans.rotation.y = -y; trans.rotation.z = -z;
+  }
+  void rotate(float dx, float dy, float dz)
+  {
+    trans.rotation.x -= dx; trans.rotation.y -= dy; trans.rotation.z -= dz;
   }
 };
 
@@ -263,7 +274,7 @@ struct game_object
   {
     material.sh.bind();
     material.updateUniforms();
-    transform.bindMatrix(material.sh);
+    material.sh.setUniformMat4f("umodel", transform.buildMatrix());
     mesh.bind();
   }
 };

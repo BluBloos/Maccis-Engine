@@ -32,7 +32,7 @@ void DrawBatch(material material, mesh mesh, camera cam, transform *objects, uns
   for (unsigned int i = 0; i < count; i++)
   {
     transform t = objects[i];
-    t.bindMatrix(material.sh);
+    material.sh.setUniformMat4f("umodel", t.buildMatrix());
     glDrawElements(GL_TRIANGLES, mesh.indexBuffer.count, GL_UNSIGNED_INT, NULL);
   }
 }

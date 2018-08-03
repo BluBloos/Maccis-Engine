@@ -138,8 +138,9 @@ mat4 CreateProjectionMatrix(float fov, float aspectRatio, float n, float f)
 
 INTERNAL camera CreateCamera(float width, float height, float fov)
 {
-  camera cam;
+  camera cam = {};
   cam.proj = CreateProjectionMatrix(fov, width / height, 1.0f, 100.0f);
+  cam.trans.setScale(1.0f, 1.0f, 1.0f);
   return cam;
 }
 
@@ -207,21 +208,46 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
   engineState->dummyObjects[2].setPosition(0.0f, -5.0f, -15.0f);
   engineState->dummyObjects[3].setPosition(0.0f, +5.0f, -10.0f);
 
-  engineState->suzanne = GameObjectFromRawModel(LoadOBJ(engineState->memoryArena, memory.maccisDirectory,  
+  engineState->suzanne = GameObjectFromRawModel(LoadOBJ(engineState->memoryArena, memory.maccisDirectory,
     BuildFilePath(memory.maccisDirectory, "res\\monkey.obj", stringBuffer, 260)), sh);
 }
 
 void Update(engine_memory memory, user_input userInput)
 {
   engine_state *engineState = (engine_state *)memory.storage;
+
+  //process input
+  float speed = 5 / 60.0f;
+  if (userInput.keyStates[MACCIS_KEY_W].endedDown)
+  {
+    engineState->mainCamera.translate(0.0f, 0.0f, -speed);
+  }
+  if (userInput.keyStates[MACCIS_KEY_A].endedDown)
+  {
+    engineState->mainCamera.translate(-speed, 0.0f, 0.0f);
+  }
+  if (userInput.keyStates[MACCIS_KEY_S].endedDown)
+  {
+    engineState->mainCamera.translate(0.0f, 0.0f, speed);
+  }
+  if (userInput.keyStates[MACCIS_KEY_D].endedDown)
+  {
+    engineState->mainCamera.translate(speed, 0.0f, 0.0f);
+  }
+  if (userInput.keyStates[MACCIS_KEY_SHIFT].endedDown)
+  {
+    engineState->mainCamera.translate(0.0f, -speed, 0.0f);
+  }
+  if (userInput.keyStates[MACCIS_KEY_SPACE].endedDown)
+  {
+    engineState->mainCamera.translate(0.0f, speed, 0.0f);
+  }
+
+  //do rendering
   Clear();
-  engineState->defaultObject.material.setColor(engineState->r++ / 255.0f, 1.0f, 1.0f, 1.0f);
-  //engineState->defaultObject.transform.scale(1.01f, 1.0f, 1.0f);
-  engineState->defaultObject.transform.rotate(0.0f, 2.0f, 0.0f);
-  engineState->defaultObject.transform.translate(0.0f, 0.0f, -0.01f);
-  Draw(engineState->defaultObject, engineState->mainCamera);
-  //DrawBatch(engineState->defaultObject.material, engineState->defaultObject.mesh, engineState->mainCamera, engineState->dummyObjects, 4);
-  engineState->suzanne.transform.translate(0.0f, 0.0f, -0.01f);
+
+  engineState->suzanne.transform.rotate(0.0f, 2.0f, 0.01f);
+  //engineState->suzanne.transform.translate(0.0f, 0.0f, -0.01f);
   Draw(engineState->suzanne, engineState->mainCamera);
 }
 

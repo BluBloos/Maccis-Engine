@@ -15,5 +15,4 @@ struct engine_state
   game_object suzanne;
   camera mainCamera;
   transform dummyObjects[10];
-  char r;
 };

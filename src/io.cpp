@@ -90,9 +90,13 @@ raw_model LoadOBJ(memory_arena Arena, file_path maccisDirectory, char *objFilePa
   Py_Initialize(); //initialize the python interpreter
 	printf("Initialized python interpreter.\n");
 	BuildFilePath(maccisDirectory, "src", stringBuffer, 260); //build src directory string!
-	wsprintf(stringBuffer2, "import sys\nsys.path.insert(0, '%s')", stringBuffer);
+
+	//TODO(Noah): Remove this windows call
+	wsprintf(stringBuffer2, "import sys\nsys.path.insert(0, '%s')", stringBuffer); //format the command for python
+
 	PyRun_SimpleString(stringBuffer2); //set the sys.path
   pName = PyString_FromString("load_obj"); //load the module!
+
 	pModule = PyImport_Import(pName);
   Py_DECREF(pName); //decref kills it, but you gotta be sure it isn't NULL
 
