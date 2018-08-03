@@ -207,7 +207,7 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
   engineState->dummyObjects[2].setPosition(0.0f, -5.0f, -15.0f);
   engineState->dummyObjects[3].setPosition(0.0f, +5.0f, -10.0f);
 
-  engineState->suzanne = GameObjectFromRawModel(LoadOBJ(engineState->memoryArena,
+  engineState->suzanne = GameObjectFromRawModel(LoadOBJ(engineState->memoryArena, memory.maccisDirectory,  
     BuildFilePath(memory.maccisDirectory, "res\\monkey.obj", stringBuffer, 260)), sh);
 }
 

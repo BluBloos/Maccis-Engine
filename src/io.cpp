@@ -74,21 +74,26 @@ int loadPythonModule(char *moduleName, char *functionName, char *arg)
     return 0;
 }
 
-raw_model LoadOBJ(memory_arena Arena, char *path)
+raw_model LoadOBJ(memory_arena Arena, file_path maccisDirectory, char *objFilePath)
 {
   raw_model model = {};
 
   //parse the obj using python!
+	//TODO(Noah): Remove hard coded value of 260 in this function!
   char stringBuffer[260];
+	char stringBuffer2[260];
 
   PyObject *pName, *pModule, *pFunc;
   PyObject *pArgs, *pValue;
 	PyObject *vertices, *indices;
 
   Py_Initialize(); //initialize the python interpreter
-  pName = PyString_FromString("load_obj");
-
-  pModule = PyImport_Import(pName);
+	printf("Initialized python interpreter.\n");
+	BuildFilePath(maccisDirectory, "src", stringBuffer, 260); //build src directory string!
+	wsprintf(stringBuffer2, "import sys\nsys.path.insert(0, '%s')", stringBuffer);
+	PyRun_SimpleString(stringBuffer2); //set the sys.path
+  pName = PyString_FromString("load_obj"); //load the module!
+	pModule = PyImport_Import(pName);
   Py_DECREF(pName); //decref kills it, but you gotta be sure it isn't NULL
 
   if (pModule != NULL) //check whether or not we actually loaded the module
@@ -97,13 +102,13 @@ raw_model LoadOBJ(memory_arena Arena, char *path)
     if (pFunc && PyCallable_Check(pFunc)) //these conditions confirm that there is a function
     {
       pArgs = PyTuple_New(1);
-      pValue = PyString_FromString(path);
+      pValue = PyString_FromString(objFilePath);
       PyTuple_SetItem(pArgs, 0, pValue);
       pValue = PyObject_CallObject(pFunc, pArgs); //this calls the function and pValue is set to the return of the function
       Py_DECREF(pArgs); //gotta make sure to decref that shit
       if (pValue != NULL)
       {
-        printf("Function returned succesfully\n");
+        printf("obj function called and returned succesfully\n");
         if(PyList_Check(pValue))
         {
 					vertices = PyList_GetItem(pValue, 2);
@@ -160,5 +165,6 @@ raw_model LoadOBJ(memory_arena Arena, char *path)
   }
 
     Py_Finalize(); //finalize the interpreter
+		printf("Finalized the python interpreter.\n");
   return model;
 }

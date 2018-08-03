@@ -22,6 +22,14 @@ unsigned int GetStringLength(char *string)
 	return count;
 }
 
+//TODO(Noah): Remove dependency on MAX_PATH
+//NOTE(Noah): There is no length checking on the destination pointer!
+char *MaccisCatStrings(char *stringA, char *stringB, char *dest)
+{
+  CatStrings(GetStringLength(stringA), stringA, GetStringLength(stringB), stringB, MAX_PATH, dest);
+  return dest;
+}
+
 char *BuildFilePath(file_path fpath, char *fileName, char *buffer, int bufferLength)
 {
 	CatStrings(fpath.length, fpath.path, GetStringLength(fileName), fileName, bufferLength, buffer);
