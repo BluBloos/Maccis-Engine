@@ -14,7 +14,7 @@ typedef BOOL WINAPI wgl_swap_interval_ext(int interval);
 //setup global variables
 INTERNAL bool globalRunning = true;
 INTERNAL wgl_swap_interval_ext *wglSwapInterval;
-INTERNAL user_input globalUserInput;
+INTERNAL user_input globalUserInput = {};
 
 void Win32PrepareInput()
 {
@@ -159,7 +159,13 @@ LRESULT CALLBACK Win32WindowProc(HWND window,
     } break;
 
     //mouse movement
-    
+    case WM_MOUSEMOVE:
+    {
+      int x = (int)lParam & 0x0000FFFF;
+      int y = ((int)lParam & 0xFFFF0000) >> 16;
+      globalUserInput.mouseX = x;
+      globalUserInput.mouseY = y;
+    } break;
 
 		default:
 		{
@@ -332,7 +338,6 @@ int CALLBACK WinMain(HINSTANCE instance,
       GetWindowRect(windowHandle, &rect);
 
       engine_memory engineMemory = {};
-
       engineMemory.maccisDirectory = filePath;
       engineMemory.ReadFile = Win32ReadFile;
       engineMemory.FreeFile = Win32FreeFile;
@@ -341,9 +346,18 @@ int CALLBACK WinMain(HINSTANCE instance,
 
       Init(engineMemory, rect.right - rect.left, rect.bottom - rect.top);
 
+      int lastMouseX, lastMouseY;
+
       while(globalRunning)
 			{
+        lastMouseX = globalUserInput.mouseX;
+        lastMouseY = globalUserInput.mouseY;
+
         Win32ProcessMessages();
+
+        globalUserInput.mouseDX = globalUserInput.mouseX - lastMouseX;
+        globalUserInput.mouseDY = globalUserInput.mouseY - lastMouseX;
+
         Update(engineMemory, globalUserInput);
         SwapBuffers(dc);
         Win32PrepareInput();

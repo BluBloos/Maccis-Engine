@@ -53,6 +53,7 @@ struct key_state
 struct user_input
 {
   key_state keyStates[MAX_KEY_STATES];
+  int mouseX, mouseDX, mouseY, mouseDY;
 };
 
 struct read_file_result

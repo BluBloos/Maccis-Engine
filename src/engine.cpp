@@ -245,13 +245,10 @@ void Update(engine_memory memory, user_input userInput)
   {
     engineState->mainCamera.translateLocal(0.0f, speed, 0.0f);
   }
-  if (userInput.keyStates[MACCIS_KEY_LEFT].endedDown)
+  if (userInput.keyStates[MACCIS_MOUSE_MIDDLE].endedDown)
   {
-    engineState->mainCamera.rotate(0.0f, -speed * 10, 0.0f);
-  }
-  if (userInput.keyStates[MACCIS_KEY_RIGHT].endedDown)
-  {
-    engineState->mainCamera.rotate(0.0f, speed * 10, 0.0f);
+    engineState->mainCamera.rotate(0.0f, userInput.mouseDX / 10, 0.0f);
+    engineState->mainCamera.rotate(userInput.mouseDY / 10, 0.0f, 0.0f);
   }
 
   //do rendering
