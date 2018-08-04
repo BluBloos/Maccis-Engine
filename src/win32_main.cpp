@@ -115,6 +115,8 @@ LRESULT CALLBACK Win32WindowProc(HWND window,
 			//TODO(Noah): Handle as message to user
 			globalRunning = false;
 		} break;
+
+    //keyboard messages
     case WM_KEYUP:
     {
       unsigned int vkCode = wParam;
@@ -124,7 +126,41 @@ LRESULT CALLBACK Win32WindowProc(HWND window,
     {
       unsigned int vkCode = wParam;
       Win32ProccessKeyboardMessage(vkCode, true);
-    };
+    } break;
+
+    //left mouse button
+    case WM_LBUTTONDOWN:
+    {
+      Win32ProcessKeyboardKey(MACCIS_MOUSE_LEFT, true);
+    } break;
+    case WM_LBUTTONUP:
+    {
+      Win32ProcessKeyboardKey(MACCIS_MOUSE_LEFT, false);
+    } break;
+
+    //right mouse button
+    case WM_RBUTTONDOWN:
+    {
+      Win32ProcessKeyboardKey(MACCIS_MOUSE_RIGHT, true);
+    } break;
+    case WM_RBUTTONUP:
+    {
+      Win32ProcessKeyboardKey(MACCIS_MOUSE_RIGHT, false);
+    } break;
+
+    //middle mouse button
+    case WM_MBUTTONDOWN:
+    {
+      Win32ProcessKeyboardKey(MACCIS_MOUSE_MIDDLE, true);
+    } break;
+    case WM_MBUTTONUP:
+    {
+      Win32ProcessKeyboardKey(MACCIS_MOUSE_MIDDLE, false);
+    } break;
+
+    //mouse movement
+    
+
 		default:
 		{
 			result = DefWindowProc(window,message,wParam,lParam);

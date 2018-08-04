@@ -141,6 +141,9 @@ INTERNAL camera CreateCamera(float width, float height, float fov)
   camera cam = {};
   cam.proj = CreateProjectionMatrix(fov, width / height, 1.0f, 100.0f);
   cam.trans.setScale(1.0f, 1.0f, 1.0f);
+  cam.trans.forward = NewVec3(0.0f, 0.0f, 1.0f);
+  cam.trans.up = NewVec3(0.0f, 1.0f, 0.0f);
+  cam.trans.right = NewVec3(1.0f, 0.0f, 0.0f);
   return cam;
 }
 
@@ -220,27 +223,35 @@ void Update(engine_memory memory, user_input userInput)
   float speed = 5 / 60.0f;
   if (userInput.keyStates[MACCIS_KEY_W].endedDown)
   {
-    engineState->mainCamera.translate(0.0f, 0.0f, -speed);
+    engineState->mainCamera.translateLocal(0.0f, 0.0f, -speed);
   }
   if (userInput.keyStates[MACCIS_KEY_A].endedDown)
   {
-    engineState->mainCamera.translate(-speed, 0.0f, 0.0f);
+    engineState->mainCamera.translateLocal(-speed, 0.0f, 0.0f);
   }
   if (userInput.keyStates[MACCIS_KEY_S].endedDown)
   {
-    engineState->mainCamera.translate(0.0f, 0.0f, speed);
+    engineState->mainCamera.translateLocal(0.0f, 0.0f, speed);
   }
   if (userInput.keyStates[MACCIS_KEY_D].endedDown)
   {
-    engineState->mainCamera.translate(speed, 0.0f, 0.0f);
+    engineState->mainCamera.translateLocal(speed, 0.0f, 0.0f);
   }
   if (userInput.keyStates[MACCIS_KEY_SHIFT].endedDown)
   {
-    engineState->mainCamera.translate(0.0f, -speed, 0.0f);
+    engineState->mainCamera.translateLocal(0.0f, -speed, 0.0f);
   }
   if (userInput.keyStates[MACCIS_KEY_SPACE].endedDown)
   {
-    engineState->mainCamera.translate(0.0f, speed, 0.0f);
+    engineState->mainCamera.translateLocal(0.0f, speed, 0.0f);
+  }
+  if (userInput.keyStates[MACCIS_KEY_LEFT].endedDown)
+  {
+    engineState->mainCamera.rotate(0.0f, -speed * 10, 0.0f);
+  }
+  if (userInput.keyStates[MACCIS_KEY_RIGHT].endedDown)
+  {
+    engineState->mainCamera.rotate(0.0f, speed * 10, 0.0f);
   }
 
   //do rendering
