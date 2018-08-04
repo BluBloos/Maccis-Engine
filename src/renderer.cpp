@@ -3,7 +3,7 @@
 void Clear()
 {
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-  glClear(GL_COLOR_BUFFER_BIT);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 void DrawNoIndex(game_object object, camera cam)
@@ -20,7 +20,6 @@ void Draw(game_object object, camera cam)
   cam.bind(object.material.sh);
 
   GL_CALL(glDrawElements(GL_TRIANGLES, object.mesh.indexBuffer.count, GL_UNSIGNED_INT, NULL));
-
 }
 
 void DrawBatch(material material, mesh mesh, camera cam, transform *objects, unsigned int count)

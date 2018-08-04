@@ -143,10 +143,7 @@ struct transform
     };
 
     mat4 bufferMatrix = {};
-    for (unsigned int x = 0; x < 16; x++)
-    {
-      bufferMatrix.matp[x] = array[x];
-    }
+    memcpy(bufferMatrix.matp, array, 16 * sizeof(float));
 
     bufferMatrix.mat[3][0] = position.x;
     bufferMatrix.mat[3][1] = position.y;
@@ -160,12 +157,22 @@ struct transform
     };
 
     mat4 rotationMatrixY = {};
-    for (unsigned int x = 0; x < 16; x++)
-    {
-      rotationMatrixY.matp[x] = array2[x];
-    }
+    memcpy(rotationMatrixY.matp, array2, 16 * sizeof(float));
 
     bufferMatrix = TransformMatrix(bufferMatrix, rotationMatrixY);
+
+    float array3[] = {
+      1, 0, 0, 0,
+      0, cosf(rotation.x * DEGREES_TO_RADIANS), sinf(rotation.x * DEGREES_TO_RADIANS), 0,
+      0, -sinf(rotation.x * DEGREES_TO_RADIANS), cosf(rotation.x * DEGREES_TO_RADIANS), 0,
+      0, 0, 0, 1
+    };
+
+    mat4 rotationMatrixZ = {};
+    memcpy(rotationMatrixZ.matp, array3, 16 * sizeof(float));
+
+    bufferMatrix = TransformMatrix(bufferMatrix, rotationMatrixZ);
+
     return bufferMatrix;
   }
   mat4 buildMatrix()

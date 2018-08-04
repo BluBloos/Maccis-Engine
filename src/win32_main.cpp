@@ -230,6 +230,9 @@ void Win32InitOpenGL(HWND window)
     {
       wglSwapInterval(1);
     }
+
+    //enable depth buffering
+    glEnable(GL_DEPTH_TEST);
   }else
   {
     //TODO(Noah): opengl did not initialize
@@ -356,7 +359,7 @@ int CALLBACK WinMain(HINSTANCE instance,
         Win32ProcessMessages();
 
         globalUserInput.mouseDX = globalUserInput.mouseX - lastMouseX;
-        globalUserInput.mouseDY = globalUserInput.mouseY - lastMouseX;
+        globalUserInput.mouseDY = globalUserInput.mouseY - lastMouseY;
 
         Update(engineMemory, globalUserInput);
         SwapBuffers(dc);
