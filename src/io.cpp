@@ -2,6 +2,31 @@
 #define PY_FLOAT_FROM_LIST(list, index) (float)PyFloat_AsDouble(PyList_GetItem(list, index))
 #define PY_INT_FROM_LIST(list, index) (unsigned int)PyInt_AsLong(PyList_GetItem(list, index))
 
+/*
+struct loaded_bitmap
+{
+  unsigned int scale;
+  unsigned int height;
+  unsigned int width;
+  unsigned int *pixelPointer;
+  void *container;
+  void free(platform_free_file FreeFile)
+  {
+    FreeFile(container);
+  }
+};
+*/
+
+inline loaded_bitmap MakeEmptyBitmap(memory_arena arena, unsigned int width, unsigned int height)
+{
+	loaded_bitmap bitmap;
+	bitmap.scale = 1;
+	bitmap.width = width;
+	bitmap.height = height;
+	bitmap.pixelPointer = (unsigned int *)arena.push(width * height * sizeof(unsigned int));
+	return bitmap;
+}
+
 loaded_bitmap LoadBMP(platform_read_file *ReadFile, char *path)
 {
 	loaded_bitmap bitmap = {};

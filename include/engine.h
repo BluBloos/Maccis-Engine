@@ -11,6 +11,7 @@ struct engine_state
 {
   memory_arena memoryArena;
   texture defaultTexture;
+  texture testTexture;
   game_object defaultObject;
   game_object suzanne;
   camera mainCamera;

@@ -94,7 +94,7 @@ buffer_layout CreateBufferLayout()
   return bufferLayout;
 }
 
-texture CreateTexture(platform_read_file *ReadFile, platform_free_file *FreeFile, char *path)
+texture CreateTexture(platform_read_file *ReadFile, platform_free_file *FreeFile, char *path, unsigned int slot)
 {
   texture newTexture;
   glGenTextures(1, &newTexture.id);
@@ -110,6 +110,7 @@ texture CreateTexture(platform_read_file *ReadFile, platform_free_file *FreeFile
     newTexture.localTexture.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, newTexture.localTexture.pixelPointer);
   glBindTexture(GL_TEXTURE_2D, 0);
   newTexture.localTexture.free(FreeFile);
+  newTexture.slot = slot;
   return newTexture;
 }
 
@@ -147,6 +148,25 @@ INTERNAL camera CreateCamera(float width, float height, float fov)
   return cam;
 }
 
+INTERNAL texture BuildTextureFromBitmapNoFree(loaded_bitmap bitmap, unsigned int slot)
+{
+  texture newTexture = {};
+  glGenTextures(1, &newTexture.id);
+  glBindTexture(GL_TEXTURE_2D, newTexture.id);
+  newTexture.localTexture = bitmap;
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, newTexture.localTexture.width,
+    newTexture.localTexture.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, newTexture.localTexture.pixelPointer);
+  glBindTexture(GL_TEXTURE_2D, 0);
+  newTexture.slot = slot;
+  return newTexture;
+}
+
 game_object GameObjectFromRawModel(raw_model model, shader sh)
 {
   game_object gameObject = {};
@@ -164,7 +184,6 @@ game_object GameObjectFromRawModel(raw_model model, shader sh)
 
   gameObject.material.sh = sh;
   gameObject.material.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-  gameObject.material.setTexture(0);
   gameObject.transform.setScale(1.0f, 1.0f, 1.0f);
   gameObject.transform.setPosition(0.0f, 0.0f, -1.0f);
 
@@ -193,13 +212,14 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
   engineState->defaultObject.material.setColor(1.0f, 1.0f, 1.0f, 1.0f);
 
   engineState->defaultTexture = CreateTexture(memory.ReadFile, memory.FreeFile,
-    BuildFilePath(memory.maccisDirectory, "res\\test.bmp", stringBuffer, 260));
-  engineState->defaultTexture.bind(0);
-  engineState->defaultObject.material.setTexture(0);
+    BuildFilePath(memory.maccisDirectory, "res\\test.bmp", stringBuffer, 260), 0);
+
+  engineState->testTexture = BuildTextureFromBitmapNoFree( MakeNothingsTest(memory.ReadFile, engineState->memoryArena), 1);
+  engineState->defaultObject.material.setTexture(engineState->testTexture);
 
   engineState->mainCamera = CreateCamera((float)width, (float)height, 90.0f);
   engineState->defaultObject.transform.setScale(1.0f, 1.0f, 1.0f);
-  engineState->defaultObject.transform.setPosition(0.0f, 0.0f, -1.0f);
+  engineState->defaultObject.transform.setPosition(0.0f, 0.0f, -5.0f);
 
   for (unsigned int i = 0; i < 10; i++)
   {
@@ -213,6 +233,7 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
 
   engineState->suzanne = GameObjectFromRawModel(LoadOBJ(engineState->memoryArena, memory.maccisDirectory,
     BuildFilePath(memory.maccisDirectory, "res\\monkey.obj", stringBuffer, 260)), sh);
+  engineState->suzanne.material.setTexture(engineState->defaultTexture);
 }
 
 void Update(engine_memory memory, user_input userInput)
@@ -254,8 +275,10 @@ void Update(engine_memory memory, user_input userInput)
   //do rendering
   Clear();
 
-  engineState->suzanne.transform.rotate(0.0f, 2.0f, 0.01f);
-  //engineState->suzanne.transform.translate(0.0f, 0.0f, -0.01f);
+  engineState->defaultObject.transform.rotate(0.0f, -2.0f, 0.0f);
+  Draw(engineState->defaultObject, engineState->mainCamera);
+
+  engineState->suzanne.transform.rotate(0.0f, 2.0f, 0.0f);
   Draw(engineState->suzanne, engineState->mainCamera);
 }
 

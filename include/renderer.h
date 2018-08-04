@@ -286,34 +286,12 @@ struct camera
   }
 };
 
-struct material
-{
-  shader sh;
-  vec4 color;
-  int texture;
-  void setColor(float r, float g, float b, float a)
-  {
-    color.x = r;
-    color.y = g;
-    color.z = b;
-    color.w = a;
-  }
-  void setTexture(unsigned int slot)
-  {
-    texture = slot;
-  }
-  void updateUniforms()
-  {
-    sh.setUniform4f("ucolor", color.x, color.y, color.z, color.w);
-    sh.setUniform1i("utexture", texture);
-  }
-};
-
 struct texture
 {
   unsigned int id;
+  unsigned int slot;
   loaded_bitmap localTexture;
-  void bind(unsigned int slot)
+  void bind()
   {
     glActiveTexture(GL_TEXTURE0 + slot);
     glBindTexture(GL_TEXTURE_2D, id);
@@ -321,6 +299,29 @@ struct texture
   void del()
   {
     glDeleteTextures(1, &id);
+  }
+};
+
+struct material
+{
+  shader sh;
+  vec4 color;
+  texture tex;
+  void setColor(float r, float g, float b, float a)
+  {
+    color.x = r;
+    color.y = g;
+    color.z = b;
+    color.w = a;
+  }
+  void setTexture(texture t)
+  {
+    tex = t;
+  }
+  void updateUniforms()
+  {
+    sh.setUniform4f("ucolor", color.x, color.y, color.z, color.w);
+    sh.setUniform1i("utexture", tex.slot);
   }
 };
 
@@ -343,6 +344,7 @@ struct game_object
   void bind()
   {
     material.sh.bind();
+    material.tex.bind();
     material.updateUniforms();
     material.sh.setUniformMat4f("umodel", transform.buildMatrix());
     mesh.bind();

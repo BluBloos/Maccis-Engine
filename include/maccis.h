@@ -96,3 +96,6 @@ struct memory_arena
 #include <maccis_io.h>
 #include <maccis_strings.h>
 #include <io.cpp>
+
+//NOTE(Noah): this file cannot stay here it is stricly for testing purposes!
+#include <win32_fonts.cpp>
