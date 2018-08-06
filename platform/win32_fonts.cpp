@@ -1,53 +1,38 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <stb_truetype.h>
 
-INTERNAL loaded_bitmap MakeNothingsTest(platform_read_file *ReadFile, memory_arena arena)
+
+INTERNAL loaded_asset BuildFontAsset(platform_read_file *ReadFile, platform_free_file *FreeFile, platform_write_file *WriteFile,
+  memory_arena arena, char * font, float int pixelHeight)
+{
+  loaded_asset asset = {};
+
+  char *stringBuffer[MAX_PATH];
+  MaccisCatStringsUnchecked("C:\\Windows\\Fonts\\", font, stringBuffer);
+  read_file_result fileResult = ReadFile(stringBuffer);
+
+  for (unsigned int i = 32; i < 127; i++)
+  {
+    AssetPushBitmap(BuildCharacterBitmap(fileResult, i, pixelHeight, arena))
+  }
+
+  asset.write(WriteFile, asset);
+
+  fileResult.free();
+}
+
+INTERNAL loaded_bitmap BuildCharacterBitmap(read_file_result fontFile, char character, float pixelHeight, memory_arena arena)
 {
   loaded_bitmap result = {};
 
-  //NOTE(Noah): It's okay that this path is absolute since all fonts are stored in the same locations
-  //on all installations of windows (I hope).
-  read_file_result fileResult = ReadFile("C:\\Windows\\Fonts\\arial.ttf");
   stbtt_fontinfo font;
-
-  /* Given an offset into the file that defines a font, this function builds
-     the necessary cached info for the rest of the system. You must allocate
-     the stbtt_fontinfo yourself, and stbtt_InitFont will fill it out. You don't
-     need to do anything special to free it, because the contents are pure
-     value data with no additional data structures. Returns 0 on failure. */
-  // STBTT_DEF int stbtt_InitFont(stbtt_fontinfo *info, const unsigned char *data, int offset);
-
-  // Each .ttf/.ttc file may have more than one font. Each font has a sequential
-  // index number starting from 0. Call this function to get the font offset for
-  // a given index; it returns -1 if the index is out of range. A regular .ttf
-  // file will only define one font and it always be at offset 0, so it will
-  // return '0' for index 0, and -1 for all other indices.
-  // STBTT_DEF int stbtt_GetFontOffsetForIndex(const unsigned char *data, int index);
-
-  // STBTT_DEF unsigned char *stbtt_GetCodepointBitmap(const stbtt_fontinfo *info,
-  // float scale_x, float scale_y, int codepoint, int *width, int *height, int *xoff, int *yoff);
-  // allocates a large-enough single-channel 8bpp bitmap and renders the
-  // specified character/glyph at the specified scale into it, with
-  // antialiasing. 0 is no coverage (transparent), 255 is fully covered (opaque).
-  // *width & *height are filled out with the width & height of the bitmap,
-  // which is stored left-to-right, top-to-bottom.
-  // xoff/yoff are the offset it pixel space from the glyph origin to the top-left of the bitmap
-
-  // STBTT_DEF float stbtt_ScaleForPixelHeight(const stbtt_fontinfo *info, float pixels);
-  // computes a scale factor to produce a font whose "height" is 'pixels' tall.
-  // Height is measured as the distance from the highest ascender to the lowest
-  // descender; in other words, it's equivalent to calling stbtt_GetFontVMetrics
-  // and computing:
-  //       scale = pixels / (ascent - descent)
-  // so if you prefer to measure height by the ascent only, use a similar calculation.
-
-  if(!stbtt_InitFont(&font, (unsigned char *)fileResult.content, stbtt_GetFontOffsetForIndex((unsigned char *)fileResult.content, 0)))
+  if(!stbtt_InitFont(&font, (unsigned char *)fontFile.content, stbtt_GetFontOffsetForIndex((unsigned char *)fontFile.content, 0)))
   {
     //TODO(Noah): logging since it failed to initialize the font
   }
 
   int width, height, xoffset, yoffset;
-  unsigned char *monoBitmap = stbtt_GetCodepointBitmap(&font, 0, stbtt_ScaleForPixelHeight(&font, 120.0f), 'N',
+  unsigned char *monoBitmap = stbtt_GetCodepointBitmap(&font, 0, stbtt_ScaleForPixelHeight(&font, pixelHeight), character,
     &width, &height, &xoffset, &yoffset);
 
   //Allocate a bitmap so we can fill it!
