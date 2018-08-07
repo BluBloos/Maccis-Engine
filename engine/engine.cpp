@@ -2,7 +2,10 @@
 
 #include <renderer.cpp> //service to engine
 #include <file_io.cpp> //service to engine
+#include <asset.cpp> //service to engine
 
+#include <iostream>
+#include <chrono>
 
 INTERNAL float vertices[] = {
   -0.5f, -0.5f, 0.0f, 0.0f, //0
@@ -191,11 +194,31 @@ game_object GameObjectFromRawModel(raw_model model, shader sh)
   return gameObject;
 }
 
+loaded_bitmap GetCharacterFromFont(loaded_bitmap *font, unsigned int character)
+{
+  int index = character - 32;
+  if (index > 0)
+  {
+    return font[index];
+  } else
+  {
+    return font[0];
+  }
+}
+
 void Init(engine_memory memory, unsigned int width, unsigned int height)
 {
   engine_state *engineState = (engine_state *)memory.storage;
   engineState->memoryArena.init((char *)memory.storage + sizeof(engine_state), memory.storageSize - sizeof(engine_state));
   char stringBuffer[260];
+
+  //open font
+  engineState->fontAsset = LoadAsset(memory.ReadFile, memory.FreeFile,
+    &engineState->memoryArena,
+    MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\arial.asset",stringBuffer));
+
+  //load bitmaps from asset into bitmap list
+  ParseAssetOfBitmapList(&engineState->fontAsset, engineState->font);
 
   engineState->defaultObject.mesh.vao = CreateVertexArray(); //make the vao
   vertex_buffer vertexBuffer = CreateVertexBuffer(vertices, 16); //make the vertex buffer
@@ -215,8 +238,10 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
   engineState->defaultTexture = CreateTexture(memory.ReadFile, memory.FreeFile,
     MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\test.bmp", stringBuffer), 0);
 
-  //engineState->testTexture = BuildTextureFromBitmapNoFree( MakeNothingsTest(memory.ReadFile, engineState->memoryArena), 1);
-  engineState->defaultObject.material.setTexture(engineState->defaultTexture);
+  engineState->testTexture = BuildTextureFromBitmapNoFree(
+    GetCharacterFromFont(engineState->font, 'A'), 1);
+
+  engineState->defaultObject.material.setTexture(engineState->testTexture);
 
   engineState->mainCamera = CreateCamera((float)width, (float)height, 90.0f);
   engineState->defaultObject.transform.setScale(1.0f, 1.0f, 1.0f);
@@ -232,8 +257,23 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
   engineState->dummyObjects[2].setPosition(0.0f, -5.0f, -15.0f);
   engineState->dummyObjects[3].setPosition(0.0f, +5.0f, -10.0f);
 
-  engineState->suzanne = GameObjectFromRawModel(LoadOBJ(engineState->memoryArena, memory.maccisDirectory,
+  auto start = std::chrono::high_resolution_clock::now();
+
+  #if 0
+  engineState->suzanne = GameObjectFromRawModel(LoadOBJ(&engineState->memoryArena, memory.maccisDirectory,
     MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\metaball.obj", stringBuffer)), sh);
+  #else
+  engineState->monkeyAsset = LoadAsset(memory.ReadFile, memory.FreeFile,
+    &engineState->memoryArena,
+    MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\monkey.asset", stringBuffer));
+  raw_model model = *(raw_model *)engineState->monkeyAsset.pWrapper->asset;
+  engineState->suzanne = GameObjectFromRawModel(model, sh);
+  #endif
+
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<float> duration = end - start;
+  printf("obj time: %fms\n", duration.count() * 1000.0f);
+
   engineState->suzanne.material.setTexture(engineState->defaultTexture);
 }
 

@@ -13,3 +13,6 @@ struct read_file_result
 
 #define PLATFORM_READ_FILE(name) read_file_result name(char *filePath)
 typedef PLATFORM_READ_FILE(platform_read_file);
+
+#define PLATFORM_WRITE_FILE(name)  int name(char *fileName, int memorySize, void *memory)
+typedef PLATFORM_WRITE_FILE(platform_write_file);

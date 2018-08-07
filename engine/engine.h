@@ -385,10 +385,16 @@ struct engine_memory
 struct engine_state
 {
   memory_arena memoryArena;
+
   texture defaultTexture;
   texture testTexture;
+
   game_object defaultObject;
   game_object suzanne;
+
   camera mainCamera;
   transform dummyObjects[10];
+  loaded_bitmap font[100];
+  loaded_asset fontAsset;
+  loaded_asset monkeyAsset;
 };

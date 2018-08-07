@@ -2,13 +2,13 @@
 #define PY_FLOAT_FROM_LIST(list, index) (float)PyFloat_AsDouble(PyList_GetItem(list, index))
 #define PY_INT_FROM_LIST(list, index) (unsigned int)PyInt_AsLong(PyList_GetItem(list, index))
 
-inline loaded_bitmap MakeEmptyBitmap(memory_arena arena, unsigned int width, unsigned int height)
+inline loaded_bitmap MakeEmptyBitmap(memory_arena *arena, unsigned int width, unsigned int height)
 {
 	loaded_bitmap bitmap;
 	bitmap.scale = 1;
 	bitmap.width = width;
 	bitmap.height = height;
-	bitmap.pixelPointer = (unsigned int *)arena.push(width * height * sizeof(unsigned int));
+	bitmap.pixelPointer = (unsigned int *)arena->push(width * height * sizeof(unsigned int));
 	return bitmap;
 }
 
@@ -28,7 +28,7 @@ loaded_bitmap LoadBMP(platform_read_file *ReadFile, char *path)
 	return bitmap;
 }
 
-raw_model LoadOBJ(memory_arena Arena, char *maccisDirectory, char *objFilePath)
+raw_model LoadOBJ(memory_arena *Arena, char *maccisDirectory, char *objFilePath)
 {
   raw_model model = {};
 
@@ -78,8 +78,8 @@ raw_model LoadOBJ(memory_arena Arena, char *maccisDirectory, char *objFilePath)
 					model.vertexCount = PY_INT_FROM_LIST(pValue, 0);
 					model.indexCount = PY_INT_FROM_LIST(pValue, 1);
 
-          model.vertices = Arena.push( model.vertexCount * 8 * sizeof(float) );
-					model.indices = Arena.push( model.indexCount * sizeof(unsigned int) );
+          model.vertices = Arena->push( model.vertexCount * 8 * sizeof(float) );
+					model.indices = Arena->push( model.indexCount * sizeof(unsigned int) );
 
           float *vp = (float *)model.vertices;
           for (unsigned int i = 0; i < model.vertexCount * 8; i++)

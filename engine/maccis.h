@@ -13,19 +13,19 @@
 
 struct memory_arena
 {
-  void *memory;
+  char *memory;
   unsigned int size;
   unsigned int used;
   void init(void *data, unsigned int s)
   {
     size = s;
-    memory = data;
+    memory = (char *)data;
   }
   void *push(unsigned int amount)
   {
     if ( !(amount > size - used) ) //we can push!
     {
-      void *base = (char *)memory + used;
+      void *base = memory + used;
       used += amount;
       return base;
     } else

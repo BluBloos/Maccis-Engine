@@ -1,27 +1,8 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <stb_truetype.h>
 
-
-INTERNAL loaded_asset BuildFontAsset(platform_read_file *ReadFile, platform_free_file *FreeFile, platform_write_file *WriteFile,
-  memory_arena arena, char * font, float int pixelHeight)
-{
-  loaded_asset asset = {};
-
-  char *stringBuffer[MAX_PATH];
-  MaccisCatStringsUnchecked("C:\\Windows\\Fonts\\", font, stringBuffer);
-  read_file_result fileResult = ReadFile(stringBuffer);
-
-  for (unsigned int i = 32; i < 127; i++)
-  {
-    AssetPushBitmap(BuildCharacterBitmap(fileResult, i, pixelHeight, arena))
-  }
-
-  asset.write(WriteFile, asset);
-
-  fileResult.free();
-}
-
-INTERNAL loaded_bitmap BuildCharacterBitmap(read_file_result fontFile, char character, float pixelHeight, memory_arena arena)
+INTERNAL loaded_bitmap BuildCharacterBitmap(read_file_result fontFile, char character, float pixelHeight,
+  memory_arena *arena)
 {
   loaded_bitmap result = {};
 
@@ -39,7 +20,7 @@ INTERNAL loaded_bitmap BuildCharacterBitmap(read_file_result fontFile, char char
   result = MakeEmptyBitmap(arena, width, height);
 
   unsigned char *source = monoBitmap;
-  unsigned int *destRow = result.pixelPointer;
+  unsigned int *destRow = result.pixelPointer + (height - 1) * width;
   for (unsigned int y = 0; y < height; y++)
   {
     unsigned int *dest = (unsigned int *)destRow;
@@ -48,7 +29,7 @@ INTERNAL loaded_bitmap BuildCharacterBitmap(read_file_result fontFile, char char
       unsigned char alpha = *source++;
       *dest++ = alpha << 24 | alpha << 16 | alpha << 8 | alpha;
     }
-    destRow += width;
+    destRow -= width;
   }
 
   //This function will free an 8bpp bitmap
@@ -56,4 +37,24 @@ INTERNAL loaded_bitmap BuildCharacterBitmap(read_file_result fontFile, char char
 
   //finally return the bitmap which was so painstakingly crafted!
   return result;
+}
+
+INTERNAL loaded_asset BuildFontAsset(platform_read_file *ReadFile, platform_free_file *FreeFile, platform_write_file *WriteFile,
+  memory_arena *arena, char * font, float pixelHeight)
+{
+  loaded_asset asset = {};
+
+  char stringBuffer[MAX_PATH];
+  MaccisCatStringsUnchecked("C:\\Windows\\Fonts\\", font, stringBuffer);
+  read_file_result fileResult = ReadFile(stringBuffer);
+
+  for (unsigned int i = 32; i < 127; i++)
+  {
+    //TODO(Implement freeing on the memory_arena so that we can destroy the unused bitmaps!)
+    loaded_bitmap bitmap = BuildCharacterBitmap(fileResult, i, pixelHeight, arena);
+    PushBitmapToAsset(bitmap, &asset, arena);
+  }
+
+  fileResult.free(FreeFile);
+  return asset;
 }
