@@ -380,6 +380,9 @@ struct engine_memory
   char *maccisDirectory;
   platform_read_file *ReadFile;
   platform_free_file *FreeFile;
+  platform_get_clock *StartClock;
+  platform_get_clock *EndClock;
+  platform_get_delta_time *GetClockDeltaTime;
 };
 
 struct engine_state

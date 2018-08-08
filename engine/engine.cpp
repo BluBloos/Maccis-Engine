@@ -4,9 +4,6 @@
 #include <file_io.cpp> //service to engine
 #include <asset.cpp> //service to engine
 
-#include <iostream>
-#include <chrono>
-
 INTERNAL float vertices[] = {
   -0.5f, -0.5f, 0.0f, 0.0f, //0
    0.5f, -0.5f, 1.0f, 0.0f, //1
@@ -257,22 +254,17 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
   engineState->dummyObjects[2].setPosition(0.0f, -5.0f, -15.0f);
   engineState->dummyObjects[3].setPosition(0.0f, +5.0f, -10.0f);
 
-  auto start = std::chrono::high_resolution_clock::now();
+  memory.StartClock();
 
-  #if 0
-  engineState->suzanne = GameObjectFromRawModel(LoadOBJ(&engineState->memoryArena, memory.maccisDirectory,
-    MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\metaball.obj", stringBuffer)), sh);
-  #else
   engineState->monkeyAsset = LoadAsset(memory.ReadFile, memory.FreeFile,
     &engineState->memoryArena,
     MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\monkey.asset", stringBuffer));
   raw_model model = *(raw_model *)engineState->monkeyAsset.pWrapper->asset;
   engineState->suzanne = GameObjectFromRawModel(model, sh);
-  #endif
 
-  auto end = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<float> duration = end - start;
-  printf("obj time: %fms\n", duration.count() * 1000.0f);
+  memory.EndClock();
+  float duration = memory.GetClockDeltaTime();
+  printf("obj time: %fms\n", duration * 1000.0f);
 
   engineState->suzanne.material.setTexture(engineState->defaultTexture);
 }

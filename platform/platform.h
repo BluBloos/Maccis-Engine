@@ -16,3 +16,9 @@ typedef PLATFORM_READ_FILE(platform_read_file);
 
 #define PLATFORM_WRITE_FILE(name)  int name(char *fileName, int memorySize, void *memory)
 typedef PLATFORM_WRITE_FILE(platform_write_file);
+
+#define PLATFORM_GET_CLOCK(name) void name()
+typedef PLATFORM_GET_CLOCK(platform_get_clock);
+
+#define PLATFORM_GET_DELTA_TIME(name) float name()
+typedef PLATFORM_GET_DELTA_TIME(platform_get_delta_time);

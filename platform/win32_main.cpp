@@ -28,6 +28,7 @@ typedef BOOL WINAPI wgl_swap_interval_ext(int interval);
 INTERNAL bool globalRunning = true;
 INTERNAL wgl_swap_interval_ext *wglSwapInterval;
 INTERNAL user_input globalUserInput = {};
+INTERNAL win32_timing globalTimer = {};
 
 INTERNAL void Win32OpenConsole()
 {
@@ -289,20 +290,42 @@ INTERNAL void Win32InitOpenGL(HWND window)
   ReleaseDC(window, dc);
 }
 
+PLATFORM_GET_CLOCK(Win32StartClock)
+{
+  globalTimer.start = Win32GetWallClock();
+}
+
+PLATFORM_GET_CLOCK(Win32EndClock)
+{
+  globalTimer.end = Win32GetWallClock();
+}
+
+PLATFORM_GET_DELTA_TIME(Win32GetClockDeltaTime)
+{
+  return Win32GetSecondsElapsed(globalTimer.start, globalTimer.end, globalTimer.perfCountFrequency);
+}
+
 int CALLBACK WinMain(HINSTANCE instance,
   HINSTANCE prevInstance,
   LPSTR cmdLine,
   int showCode)
 {
+  //initialize the console
   Win32OpenConsole();
   unsigned int version = 1;
   printf("Maccis-Engine version %d!\n", version);
   fprintf(stdout, "stdout initialized\n");
   fprintf(stderr, "stderr initialized\n");
 
+  //build the relative path
   char stringBuffer[256];
   char win32FilePath[MAX_PATH];
   Win32GetRelativePath(win32FilePath, MAX_PATH);
+
+  //set up the win32_timer
+  LARGE_INTEGER perfCountFrequency;
+	QueryPerformanceFrequency(&perfCountFrequency);
+	globalTimer.perfCountFrequency = perfCountFrequency.QuadPart;
 
   //https://msdn.microsoft.com/en-us/library/windows/desktop/ms633576
   WNDCLASS windowClass = {};
@@ -329,11 +352,15 @@ int CALLBACK WinMain(HINSTANCE instance,
       GetWindowRect(windowHandle, &rect);
 
       engine_memory engineMemory = {};
+      engineMemory.storageSize = MB(64);
+      engineMemory.storage = VirtualAlloc(0, engineMemory.storageSize, MEM_COMMIT, PAGE_READWRITE);
+
       engineMemory.maccisDirectory = win32FilePath;
       engineMemory.ReadFile = Win32ReadFile;
       engineMemory.FreeFile = Win32FreeFile;
-      engineMemory.storageSize = MB(64);
-      engineMemory.storage = VirtualAlloc(0, engineMemory.storageSize, MEM_COMMIT, PAGE_READWRITE);
+      engineMemory.StartClock = Win32StartClock;
+      engineMemory.EndClock = Win32EndClock;
+      engineMemory.GetClockDeltaTime = Win32GetClockDeltaTime;
 
       Init(engineMemory, rect.right - rect.left, rect.bottom - rect.top);
 
