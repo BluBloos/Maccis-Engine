@@ -33,6 +33,10 @@ struct vertex_buffer
   {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
   }
+  void del()
+  {
+    glDeleteBuffers(1, &id);
+  }
 };
 
 struct buffer_element
@@ -81,6 +85,14 @@ struct index_buffer
   void bind()
   {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, id);
+  }
+  void del()
+  {
+    glDeleteBuffers(1, &id);
+  }
+  void unbind()
+  {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
   }
 };
 
@@ -373,6 +385,31 @@ struct game_object
   }
 };
 
+struct renderable_2D_vertex
+{
+  float position[2];
+  float textureCoordinate[2];
+  float normal[3];
+};
+
+//NOTE()
+struct renderable_2D
+{
+  vec2 scale;
+  vec2 position;
+  float rotation;
+  texture tex;
+  renderable_2D_vertex vertices[4];
+};
+
+struct batch_renderer_2D
+{
+  vertex_array vao;
+  index_buffer indexBuffer;
+  renderable_2D_vertex *vertexBufferMap;
+  shader defaultShader;
+};
+
 struct engine_memory
 {
   void *storage;
@@ -387,17 +424,18 @@ struct engine_memory
 
 struct engine_state
 {
+  //TODO(Noah): need the ability to free allocated memory on memoryArena
   memory_arena memoryArena;
-
   texture defaultTexture;
   texture testTexture;
-
   game_object defaultObject;
   game_object suzanne;
-
   camera mainCamera;
-  transform dummyObjects[10];
+  camera guiCamera;
   loaded_bitmap font[100];
   loaded_asset fontAsset;
   loaded_asset monkeyAsset;
+  //NOTE(Noah): unless otherwise specified by the game the batch renderer is not initialized
+  batch_renderer_2D *batchRenderer2D;
+  renderable_2D defaultSprite;
 };

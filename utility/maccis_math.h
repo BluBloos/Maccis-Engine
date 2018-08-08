@@ -29,6 +29,11 @@ struct mat4
   };
 };
 
+inline vec2 NewVec2(float x, float y)
+{
+  vec2 result = {x, y}; return result;
+}
+
 inline vec3 NewVec3(float x, float y, float z)
 {
   vec3 result = {x, y, z}; return result;

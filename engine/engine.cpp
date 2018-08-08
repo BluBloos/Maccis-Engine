@@ -1,5 +1,5 @@
 #include <engine.h>
-
+#include<engine_utility.cpp> //service to engine and all services
 #include <renderer.cpp> //service to engine
 #include <file_io.cpp> //service to engine
 #include <asset.cpp> //service to engine
@@ -72,29 +72,6 @@ vertex_buffer CreateVertexBuffer(float *data, unsigned int floatCount)
   return buffer;
 }
 
-index_buffer CreateIndexBuffer(unsigned int *data, unsigned int indexCount)
-{
-  index_buffer buffer = {}; buffer.count = indexCount;
-  glGenBuffers(1, &buffer.id);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.id);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, buffer.count * sizeof(unsigned int), data, GL_STATIC_DRAW);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-  return buffer;
-}
-
-vertex_array CreateVertexArray()
-{
-  vertex_array vertexArray = {};
-  glGenVertexArrays(1, &vertexArray.id);
-  return vertexArray;
-}
-
-buffer_layout CreateBufferLayout()
-{
-  buffer_layout bufferLayout = {};
-  return bufferLayout;
-}
-
 texture CreateTexture(platform_read_file *ReadFile, platform_free_file *FreeFile, char *path, unsigned int slot)
 {
   texture newTexture;
@@ -118,23 +95,32 @@ texture CreateTexture(platform_read_file *ReadFile, platform_free_file *FreeFile
 mat4 CreateProjectionMatrix(float fov, float aspectRatio, float n, float f)
 {
   mat4 result = {};
-
   float r = tanf(fov * DEGREES_TO_RADIANS / 2.0f) * n;
   float l = -r;
   float t = r / aspectRatio;
   float b = -t;
-
   float identity[] = {
     2 * n / (r - l),0,0,0,
     0,2 * n / (t -b),0,0,
     (r + l) / (r -l), (t + b) / (t -b), -(f + n) / (f -n), -1,
     0,0,-2 * f * n / (f -n),0
   };
-  for (unsigned int x = 0; x < 16; x++)
-  {
-    result.matp[x] = identity[x];
-  }
+  memcpy(result.matp, identity, sizeof(float) * 16);
+  return result;
+}
 
+INTERNAL mat4 CreateOrthographicMatrix(float width, float height, float n, float f)
+{
+  mat4 result = {};
+  float r = width; float l = 0;
+  float t = height; float b = 0;
+  float identity[] = {
+    2 / (r - l), 0, 0, 0,
+    0, 2 / (t -b),  0, 0,
+    0, 0, -2 / (f - n),0,
+    -(r+l)/(r-l), -(t+b)/(t-b), -(f+n)/(f-n),1
+  };
+  memcpy(result.matp, identity, sizeof(float) * 16);
   return result;
 }
 
@@ -143,6 +129,17 @@ INTERNAL camera CreateCamera(float width, float height, float fov)
   camera cam = {};
   cam.proj = CreateProjectionMatrix(fov, width / height, 1.0f, 100.0f);
   cam.trans.setScale(1.0f, 1.0f, 1.0f);
+  cam.trans.forward = NewVec3(0.0f, 0.0f, 1.0f);
+  cam.trans.up = NewVec3(0.0f, 1.0f, 0.0f);
+  cam.trans.right = NewVec3(1.0f, 0.0f, 0.0f);
+  return cam;
+}
+
+INTERNAL camera CreateOrthoCamera(float width, float height)
+{
+  camera cam = {};
+  cam.proj = CreateOrthographicMatrix(width, height, 1.0f, 100.0f);
+  cam.trans.setScale(1.0f, 1.0f , 1.0f);
   cam.trans.forward = NewVec3(0.0f, 0.0f, 1.0f);
   cam.trans.up = NewVec3(0.0f, 1.0f, 0.0f);
   cam.trans.right = NewVec3(1.0f, 0.0f, 0.0f);
@@ -203,6 +200,40 @@ loaded_bitmap GetCharacterFromFont(loaded_bitmap *font, unsigned int character)
   }
 }
 
+INTERNAL renderable_2D CreateSpriteFromTexture(float uniformScale, vec2 pos,
+  texture tex)
+{
+  renderable_2D renderable = {};
+
+  //setup transform of renderable
+  renderable.scale = NewVec2(uniformScale, uniformScale);
+  renderable.position = pos;
+  renderable.tex = tex;
+
+  //generate vertices of the renderable
+  renderable.vertices[0].position[0] = pos.x - tex.localTexture.width * uniformScale / 2.0f;
+  renderable.vertices[0].position[1] = pos.y - tex.localTexture.height * uniformScale / 2.0f;
+  renderable.vertices[0].textureCoordinate[0] = 0.0f;
+  renderable.vertices[0].textureCoordinate[1] = 0.0f;
+
+  renderable.vertices[1].position[0] = pos.x + tex.localTexture.width * uniformScale / 2.0f;
+  renderable.vertices[1].position[1] = pos.y - tex.localTexture.height * uniformScale / 2.0f;
+  renderable.vertices[1].textureCoordinate[0] = 1.0f;
+  renderable.vertices[1].textureCoordinate[1] = 0.0f;
+
+  renderable.vertices[2].position[0] = pos.x + tex.localTexture.width * uniformScale / 2.0f;
+  renderable.vertices[2].position[1] = pos.y + tex.localTexture.height * uniformScale / 2.0f;
+  renderable.vertices[2].textureCoordinate[0] = 1.0f;
+  renderable.vertices[2].textureCoordinate[1] = 1.0f;
+
+  renderable.vertices[3].position[0] = pos.x - tex.localTexture.width * uniformScale / 2.0f;
+  renderable.vertices[3].position[1] = pos.y + tex.localTexture.height * uniformScale / 2.0f;
+  renderable.vertices[3].textureCoordinate[0] = 0.0f;
+  renderable.vertices[3].textureCoordinate[1] = 1.0f;
+
+  return renderable;
+}
+
 void Init(engine_memory memory, unsigned int width, unsigned int height)
 {
   engine_state *engineState = (engine_state *)memory.storage;
@@ -217,6 +248,21 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
   //load bitmaps from asset into bitmap list
   ParseAssetOfBitmapList(&engineState->fontAsset, engineState->font);
 
+  //load in the 2D shader
+  read_file_result f1 = memory.ReadFile(MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\2D_shader.vert", stringBuffer));
+  read_file_result f2 = memory.ReadFile(MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\2D_shader.frag", stringBuffer));
+  shader sh1 = CreateShader((char *)f1.content, (char *)f2.content);
+
+  //push memory for 2d batch renderer
+  engineState->batchRenderer2D = (batch_renderer_2D *)engineState->memoryArena.push(sizeof(batch_renderer_2D));
+
+  //initialize 2d batch renderer
+  InitializeBatchRenderer2D(engineState->batchRenderer2D, sh1);
+
+  //create cameras
+  engineState->guiCamera = CreateOrthoCamera((float)width, (float)height);
+  engineState->mainCamera = CreateCamera((float)width, (float)height, 90.0f);
+
   engineState->defaultObject.mesh.vao = CreateVertexArray(); //make the vao
   vertex_buffer vertexBuffer = CreateVertexBuffer(vertices, 16); //make the vertex buffer
   buffer_layout bufferLayout = CreateBufferLayout(); //make a buffer layout
@@ -225,34 +271,28 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
   engineState->defaultObject.mesh.vao.addBuffer(vertexBuffer, bufferLayout); //describe the vao
   engineState->defaultObject.mesh.indexBuffer = CreateIndexBuffer(indices, 6);
 
-  read_file_result f1 = memory.ReadFile(MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\shader.vert", stringBuffer));
-  read_file_result f2 = memory.ReadFile(MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\shader.frag", stringBuffer));
-  shader sh = CreateShader((char *)f1.content, (char *)f2.content);
+  //load in the 3D shader
+  read_file_result f3 = memory.ReadFile(MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\shader.vert", stringBuffer));
+  read_file_result f4 = memory.ReadFile(MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\shader.frag", stringBuffer));
+  shader sh2 = CreateShader((char *)f3.content, (char *)f4.content);
 
-  engineState->defaultObject.material.sh = sh;
+  //set material of deault object
+  engineState->defaultObject.material.sh = sh2;
   engineState->defaultObject.material.setColor(1.0f, 1.0f, 1.0f, 1.0f);
 
+  //create textures
   engineState->defaultTexture = CreateTexture(memory.ReadFile, memory.FreeFile,
     MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\test.bmp", stringBuffer), 0);
-
   engineState->testTexture = BuildTextureFromBitmapNoFree(
     GetCharacterFromFont(engineState->font, 'A'), 1);
 
-  engineState->defaultObject.material.setTexture(engineState->testTexture);
+  engineState->defaultSprite = CreateSpriteFromTexture(1,
+    NewVec2((float)engineState->defaultTexture.localTexture.width / 2,
+    (float)engineState->defaultTexture.localTexture.height / 2), engineState->defaultTexture);
 
-  engineState->mainCamera = CreateCamera((float)width, (float)height, 90.0f);
+  engineState->defaultObject.material.setTexture(engineState->testTexture);
   engineState->defaultObject.transform.setScale(1.0f, 1.0f, 1.0f);
   engineState->defaultObject.transform.setPosition(0.0f, 0.0f, -5.0f);
-
-  for (unsigned int i = 0; i < 10; i++)
-  {
-    engineState->dummyObjects[i].setScale(1.0f, 1.0f, 1.0f);
-  }
-
-  engineState->dummyObjects[0].setPosition(-10.0f, 0.0f, -25.0f);
-  engineState->dummyObjects[1].setPosition(+10.0f, 0.0f, -20.0f);
-  engineState->dummyObjects[2].setPosition(0.0f, -5.0f, -15.0f);
-  engineState->dummyObjects[3].setPosition(0.0f, +5.0f, -10.0f);
 
   memory.StartClock();
 
@@ -260,7 +300,7 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
     &engineState->memoryArena,
     MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\monkey.asset", stringBuffer));
   raw_model model = *(raw_model *)engineState->monkeyAsset.pWrapper->asset;
-  engineState->suzanne = GameObjectFromRawModel(model, sh);
+  engineState->suzanne = GameObjectFromRawModel(model, sh2);
 
   memory.EndClock();
   float duration = memory.GetClockDeltaTime();
@@ -271,6 +311,7 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
 
 void Update(engine_memory memory, user_input userInput)
 {
+  memory.StartClock();
   engine_state *engineState = (engine_state *)memory.storage;
 
   //process input
@@ -305,14 +346,24 @@ void Update(engine_memory memory, user_input userInput)
     engineState->mainCamera.rotate(-userInput.mouseDY / 5, 0.0f, 0.0f);
   }
 
-  //do rendering
+  //render 3d scene
   Clear();
-
   engineState->defaultObject.transform.rotate(0.0f, -2.0f, 0.0f);
   Draw(engineState->defaultObject, engineState->mainCamera);
-
   engineState->suzanne.transform.rotate(0.0f, 2.0f, 0.0f);
   Draw(engineState->suzanne, engineState->mainCamera);
+
+  //render gui
+  BeginBatchRenderer2D(engineState->batchRenderer2D);
+
+  Submit(engineState->batchRenderer2D, &engineState->defaultSprite);
+
+  EndBatchRenderer2D(engineState->batchRenderer2D);
+  Flush(engineState->batchRenderer2D, engineState->guiCamera);
+
+  memory.EndClock();
+  float duration = memory.GetClockDeltaTime();
+  printf("update time: %fms\n", duration * 1000.0f);
 }
 
 void Clean(engine_memory memory)
