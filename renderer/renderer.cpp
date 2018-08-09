@@ -119,3 +119,18 @@ void Flush(batch_renderer_2D *batchRenderer2D, camera cam)
   batchRenderer2D->indexBuffer.unbind();
   batchRenderer2D->indexBuffer.count = 0;
 }
+
+void DebugPushText(char *string)
+{
+  //for (){
+  //loop over each character
+  //get the bitmap for each character
+  //push bitmap to screen
+  //add to x offset based on bitmap
+  //}
+
+  //special case space
+  //make sure if you scale them that they're proportional to their
+  //aspect ratio
+  //do proper verical alignment to the baseline via getting the text metrics
+}

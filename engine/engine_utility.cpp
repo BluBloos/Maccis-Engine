@@ -20,3 +20,20 @@ index_buffer CreateIndexBuffer(unsigned int *data, unsigned int indexCount)
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
   return buffer;
 }
+
+void DrawBitmapUnchecked(loaded_bitmap bitmap, unsigned int *pixelPointer, unsigned int pixelPitch)
+{
+  unsigned int *destRow = pixelPointer;
+  unsigned int *sourceRow = bitmap.pixelPointer;
+  for (unsigned int y = 0; y < bitmap.height; y++)
+  {
+    unsigned int *source = sourceRow;
+    unsigned int *dest = destRow;
+    for (unsigned int x =0; x < bitmap.width; x++)
+    {
+      *dest++ = *source++;
+    }
+    sourceRow += bitmap.width;
+    destRow += pixelPitch;
+  }
+}

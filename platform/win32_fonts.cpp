@@ -39,6 +39,13 @@ INTERNAL loaded_bitmap BuildCharacterBitmap(read_file_result fontFile, char char
   return result;
 }
 
+struct character_desriptor
+{
+  float textureCoordinate[8]; //a character has 8 texture coordinates into the atlas
+  //ascenders and descenders
+};
+
+#if 0
 INTERNAL loaded_asset BuildFontAsset(platform_read_file *ReadFile, platform_free_file *FreeFile, platform_write_file *WriteFile,
   memory_arena *arena, char * font, float pixelHeight)
 {
@@ -48,7 +55,7 @@ INTERNAL loaded_asset BuildFontAsset(platform_read_file *ReadFile, platform_free
   MaccisCatStringsUnchecked("C:\\Windows\\Fonts\\", font, stringBuffer);
   read_file_result fileResult = ReadFile(stringBuffer);
 
-  for (unsigned int i = 32; i < 127; i++)
+  for (unsigned int i = 33; i < 127; i++)
   {
     //TODO(Implement freeing on the memory_arena so that we can destroy the unused bitmaps!)
     loaded_bitmap bitmap = BuildCharacterBitmap(fileResult, i, pixelHeight, arena);
@@ -58,3 +65,126 @@ INTERNAL loaded_asset BuildFontAsset(platform_read_file *ReadFile, platform_free
   fileResult.free(FreeFile);
   return asset;
 }
+#else
+INTERNAL loaded_asset BuildFontAsset(platform_read_file *ReadFile, platform_free_file *FreeFile, platform_write_file *WriteFile,
+  memory_arena *arena, char * font, float pixelHeight)
+{
+  loaded_asset asset = {};
+
+  char stringBuffer[MAX_PATH];
+  MaccisCatStringsUnchecked("C:\\Windows\\Fonts\\", font, stringBuffer);
+  read_file_result fileResult = ReadFile(stringBuffer);
+
+  loaded_bitmap characters[127 - 33] = {};
+  unsigned int index = 0;
+
+  for (unsigned int i = 33; i < 127; i++)
+  {
+    index = i - 33;
+    //TODO(Implement freeing on the memory_arena so that we can destroy the unused bitmaps!)
+    characters[index] = BuildCharacterBitmap(fileResult, i, pixelHeight, arena);
+  }
+
+  unsigned int pixelPitch = 1080;
+  unsigned int tallestBitmap = 0;
+  unsigned int currentLine = 0;
+  unsigned int currentX = 0;
+  unsigned int totalHeight = 0;
+  for(unsigned int i = 0; i < 127 - 33; i++)
+  {
+    currentX += characters[i].width;
+    if (currentX > pixelPitch)
+    {
+      currentX = characters[i].width; //advance the x of the new line to be the bitmap wrapped down to it
+      currentLine += 1; //go to next line
+      totalHeight += tallestBitmap; //add the height of the last line to the total height
+      tallestBitmap = characters[i].height; //set the talles bitmap to the height of the wrapped bitmap
+    }
+    if(tallestBitmap < characters[i].height)
+    {
+      tallestBitmap = characters[i].height;
+    }
+  }
+
+  //setup font atlas bitmap and character descriptors
+  loaded_bitmap atlas = {};
+  atlas.width = pixelPitch;
+  atlas.height = totalHeight;
+  atlas.pixelPointer = (unsigned int *)arena->push(pixelPitch * totalHeight * sizeof(unsigned int));
+  character_desriptor descriptors[127 - 33] = {};
+
+  //parse through each bitmap and clone it into the font atlas and write the texture coordinates
+  tallestBitmap = 0;
+  currentLine = 0;
+  currentX = 0;
+  totalHeight = 0;
+  unsigned int *pixelPointer = atlas.pixelPointer;
+  for (unsigned int i = 0; i < 127 - 33; i++)
+  {
+    loaded_bitmap currentBitmap = characters[i];
+    character_desriptor *descriptor = &descriptors[i];
+    currentX += currentBitmap.width;
+
+    if (currentX > pixelPitch)
+    {
+      pixelPointer += pixelPitch - (currentX - currentBitmap.width); //advance the pixel pointer to the start of the next line
+      pixelPointer += pixelPitch * (tallestBitmap - 1); //advance the pixel pointer by tallestBitmap - 1 lines, which advances us to the next "line"
+      DrawBitmapUnchecked(currentBitmap, pixelPointer, atlas.width);
+
+      currentX = currentBitmap.width; //advance the x of the new line to be the bitmap wrapped down to it
+      currentLine += 1; //go to next lines
+      totalHeight += tallestBitmap; //add the height of the last line to the total height
+      tallestBitmap = currentBitmap.height; //set the talles bitmap to the height of the wrapped bitmap
+
+      vec2 topLeftVertex = NewVec2(0.0f, (float)totalHeight);
+      //vertex 0
+      descriptor->textureCoordinate[0] = 0.0f;
+      descriptor->textureCoordinate[1] = ((topLeftVertex.y + currentBitmap.height) * -1.0f + atlas.height)  / atlas.height;
+      //vertex 1
+      descriptor->textureCoordinate[2] = currentBitmap.width / atlas.width;
+      descriptor->textureCoordinate[3] = ((topLeftVertex.y + currentBitmap.height) * -1.0f + atlas.height) / atlas.height;
+      //vertex 2
+      descriptor->textureCoordinate[4] = currentBitmap.width / atlas.width;
+      descriptor->textureCoordinate[5] = (-topLeftVertex.y + atlas.height) / atlas.height;
+      //vertex 3
+      descriptor->textureCoordinate[6] = 0.0f;
+      descriptor->textureCoordinate[7] = (-topLeftVertex.y + atlas.height) / atlas.height;
+    }
+    else
+    {
+      DrawBitmapUnchecked(currentBitmap, pixelPointer, atlas.width);
+
+      vec2 topLeftVertex = NewVec2((float)currentX, (float)totalHeight);
+      //vertex 0
+      descriptor->textureCoordinate[0] = topLeftVertex.x / atlas.width;
+      descriptor->textureCoordinate[1] = ((topLeftVertex.y + currentBitmap.height) * -1.0f + atlas.height) / atlas.height;
+      //vertex 1
+      descriptor->textureCoordinate[2] = (topLeftVertex.x + currentBitmap.width) / atlas.width;
+      descriptor->textureCoordinate[3] = ((topLeftVertex.y + currentBitmap.height) * -1.0f + atlas.height) / atlas.height;
+      //vertex 2
+      descriptor->textureCoordinate[4] = (topLeftVertex.x + currentBitmap.width) / atlas.width;
+      descriptor->textureCoordinate[5] = (-topLeftVertex.y + atlas.height) / atlas.height;
+      //vertex 3
+      descriptor->textureCoordinate[6] = topLeftVertex.x / atlas.width;
+      descriptor->textureCoordinate[7] = (-topLeftVertex.y + atlas.height) / atlas.height;
+    }
+    pixelPointer += currentBitmap.width; //advance the pixel pointer by the width of the drawn bitmap
+
+    //recaculate the tallest bitmapo agaisnt drawn bitmap
+    if(tallestBitmap < currentBitmap.height)
+    {
+      tallestBitmap = currentBitmap.height;
+    }
+  }
+
+  //NOTE(Noah): the descriptors are stored into the asset via a float array which will not support other data we wish to store into the descriptors
+  //push atlas and character descriptor array into the asset
+  PushBitmapToAsset(atlas, &asset, arena);
+  PushFloatArrayToAsset((float *)descriptors, 127 - 33, &asset, arena);
+
+  //TODO(Noah): clean up the temporary memory that was used in the arena
+  //clean up memory and return
+  fileResult.free(FreeFile);
+  return asset;
+}
+#endif

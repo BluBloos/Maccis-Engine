@@ -2,11 +2,30 @@
 #include <stdio.h>
 
 #include <maccis.h>
+#include <maccis_math.h>
 #include <maccis_strings.h>
 #include <win32.h>
 #include <platform.h>
 #include <maccis_file_io.h>
 #include <maccis_asset.h>
+
+//TODO(Noah): Export this funciton to outside of this file
+void DrawBitmapUnchecked(loaded_bitmap bitmap, unsigned int *pixelPointer, unsigned int pixelPitch)
+{
+  unsigned int *destRow = pixelPointer;
+  unsigned int *sourceRow = bitmap.pixelPointer;
+  for (unsigned int y = 0; y < bitmap.height; y++)
+  {
+    unsigned int *source = sourceRow;
+    unsigned int *dest = destRow;
+    for (unsigned int x =0; x < bitmap.width; x++)
+    {
+      *dest++ = *source++;
+    }
+    sourceRow += bitmap.width;
+    destRow += pixelPitch;
+  }
+}
 
 #include <file_io.cpp>
 #include <asset.cpp>

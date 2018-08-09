@@ -42,17 +42,26 @@ void PushRawModelToAsset(raw_model model, loaded_asset *asset, memory_arena *are
   asset_wrapper *modelWrapper = AppendToAsset(arena, asset, sizeof(raw_model));
   memcpy(modelWrapper->asset, &model, sizeof(model));
   modelWrapper->assetType = ASSET_RAW_MODEL;
+  //TODO(Noah): please remove the constant of 8 here, it scares me
   modelWrapper->assetSize = sizeof(raw_model) + model.vertexCount * sizeof(float) * 8 +
     model.indexCount * sizeof(unsigned int);
 }
 
-//note, this will clone the bitmap
+//NOTE(Noah): this will clone the bitmap
 void PushBitmapToAsset(loaded_bitmap bitmap, loaded_asset *asset, memory_arena *arena)
 {
   asset_wrapper *bitmapWrapper = AppendToAsset(arena, asset, sizeof(loaded_bitmap));
   memcpy(bitmapWrapper->asset, &bitmap, sizeof(loaded_bitmap));
   bitmapWrapper->assetType = ASSET_BITMAP;
   bitmapWrapper->assetSize = bitmap.width * bitmap.height * sizeof(unsigned int) + sizeof(loaded_bitmap);
+}
+
+void PushFloatArrayToAsset(float *array, unsigned int arrayCount, loaded_asset *asset, memory_arena *arena)
+{
+  asset_wrapper *floatWrapper = AppendToAsset(arena, asset, arrayCount * sizeof(float));
+  memcpy(floatWrapper->asset, array, arrayCount * sizeof(float));
+  floatWrapper->assetType = ASSET_FLOAT_ARRAY;
+  floatWrapper->assetSize = arrayCount * sizeof(float);
 }
 
 void WriteAsset(platform_write_file *WriteFile, memory_arena *arena, loaded_asset *asset, char *fileName)
@@ -74,10 +83,10 @@ void WriteAsset(platform_write_file *WriteFile, memory_arena *arena, loaded_asse
   for (unsigned int i = 0; i < asset->count; i++)
   {
     switch (pWrapper->assetType) {
+      *scan = pWrapper->assetType;
+      scan += sizeof(unsigned int);
       case ASSET_BITMAP:
       {
-        *scan = pWrapper->assetType;
-        scan += sizeof(unsigned int);
         memcpy(scan, pWrapper->asset, sizeof(loaded_bitmap));
         scan += sizeof(loaded_bitmap);
         loaded_bitmap bitmap = *(loaded_bitmap *)pWrapper->asset;
@@ -86,8 +95,6 @@ void WriteAsset(platform_write_file *WriteFile, memory_arena *arena, loaded_asse
       } break;
       case ASSET_RAW_MODEL:
       {
-        *scan = pWrapper->assetType;
-        scan += sizeof(unsigned int);
         memcpy(scan, pWrapper->asset, sizeof(raw_model));
         scan += sizeof(raw_model);
         raw_model model = *(raw_model *)pWrapper->asset;
@@ -95,6 +102,12 @@ void WriteAsset(platform_write_file *WriteFile, memory_arena *arena, loaded_asse
         scan += model.vertexCount * sizeof(float) * 8;
         memcpy(scan, model.indices, model.indexCount * sizeof(unsigned int));
         scan += model.indexCount * sizeof(unsigned int);
+      } break;
+      case ASSET_FLOAT_ARRAY:
+      {
+        *(unsigned int *)scan = pWrapper->assetSize;
+        scan += sizeof(unsigned int);
+        memcpy(scan, pWrapper->asset, pWrapper->assetSize);
       } break;
     }
     pWrapper = pWrapper->pNext;
@@ -140,7 +153,13 @@ loaded_asset LoadAsset(platform_read_file *ReadFile, platform_free_file *FreeFil
         memcpy(model->indices, scan, indexSize);
         scan += indexSize;
         PushRawModelToAsset(*model, &asset, arena);
-      }
+      } break;
+      case ASSET_FLOAT_ARRAY:
+      {
+        unsigned int floatCount = *(unsigned int *)scan;
+        scan += sizeof(unsigned int);
+        PushFloatArrayToAsset((float *)scan, floatCount, &asset, arena);
+      } break;
     }
   }
 
