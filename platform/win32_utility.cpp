@@ -68,6 +68,10 @@ int main()
       scanf("%s", stringBuffer);
 
       WriteAsset(Win32WriteFile, &arena, &asset, stringBuffer);
+
+      //output debug bitmap so we can see what the bitmap actually looks like to make sure the font is like ok fam!
+      loaded_bitmap *bitmap = (loaded_bitmap *)asset.pWrapper->asset;
+      SaveBitmap("C:\\dev\\Maccis-Engine\\res\\fontAtlas.bmp", Win32WriteFile, *bitmap, &arena);
     }
 		else if (StringEquals(stringBuffer, "obj"))
 		{

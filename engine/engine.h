@@ -408,6 +408,7 @@ struct batch_renderer_2D
   index_buffer indexBuffer;
   renderable_2D_vertex *vertexBufferMap;
   shader defaultShader;
+  texture textureAtlas;
 };
 
 struct engine_memory
@@ -424,6 +425,8 @@ struct engine_memory
 
 struct engine_state
 {
+  float elapsedTime;
+  char character;
   //TODO(Noah): need the ability to free allocated memory on memoryArena
   memory_arena memoryArena;
   texture defaultTexture;
@@ -439,5 +442,5 @@ struct engine_state
   //thats why it's a pointer
   batch_renderer_2D *batchRenderer2D;
   //TODO(Noah): Change this number from 90
-  renderable_2D fontSprites[90];
+  renderable_2D fontSprites[100];
 };

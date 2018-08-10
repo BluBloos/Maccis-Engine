@@ -188,16 +188,41 @@ game_object GameObjectFromRawModel(raw_model model, shader sh)
   return gameObject;
 }
 
-loaded_bitmap GetCharacterFromFont(loaded_bitmap *font, unsigned int character)
+unsigned int GetIndexFromCharacter(unsigned int character)
 {
-  int index = character - 32;
-  if (index > 0)
-  {
-    return font[index];
-  } else
-  {
-    return font[0];
-  }
+  return character - 33;
+}
+
+INTERNAL renderable_2D CreateSprite(float uniformScale, vec2 pos, float width, float height)
+{
+  renderable_2D renderable = {};
+
+  //setup transform of renderable
+  renderable.scale = NewVec2(uniformScale, uniformScale);
+  renderable.position = pos;
+
+  //generate vertices of the renderable
+  renderable.vertices[0].position[0] = pos.x - width * uniformScale / 2.0f;
+  renderable.vertices[0].position[1] = pos.y - height * uniformScale / 2.0f;
+  renderable.vertices[0].textureCoordinate[0] = 0.0f;
+  renderable.vertices[0].textureCoordinate[1] = 0.0f;
+
+  renderable.vertices[1].position[0] = pos.x + width * uniformScale / 2.0f;
+  renderable.vertices[1].position[1] = pos.y - height * uniformScale / 2.0f;
+  renderable.vertices[1].textureCoordinate[0] = 1.0f;
+  renderable.vertices[1].textureCoordinate[1] = 0.0f;
+
+  renderable.vertices[2].position[0] = pos.x + width * uniformScale / 2.0f;
+  renderable.vertices[2].position[1] = pos.y + height * uniformScale / 2.0f;
+  renderable.vertices[2].textureCoordinate[0] = 1.0f;
+  renderable.vertices[2].textureCoordinate[1] = 1.0f;
+
+  renderable.vertices[3].position[0] = pos.x - width * uniformScale / 2.0f;
+  renderable.vertices[3].position[1] = pos.y + height * uniformScale / 2.0f;
+  renderable.vertices[3].textureCoordinate[0] = 0.0f;
+  renderable.vertices[3].textureCoordinate[1] = 1.0f;
+
+  return renderable;
 }
 
 INTERNAL renderable_2D CreateSpriteFromTexture(float uniformScale, vec2 pos,
@@ -236,8 +261,24 @@ INTERNAL renderable_2D CreateSpriteFromTexture(float uniformScale, vec2 pos,
 
 void LoadFontSpritesFromAsset(loaded_asset asset, renderable_2D *fontSprites)
 {
-  unsigned int index = 0;
-  for (unsigned int)
+  asset_wrapper wrappers[2];
+  ParseAsset(&asset, wrappers);
+
+  character_desriptor *descriptors = (character_desriptor *)wrappers[1].asset;
+  unsigned int descriptorCount = wrappers[1].assetSize / sizeof(character_desriptor);
+  for (unsigned int i = 0; i < descriptorCount; i++)
+  {
+    character_desriptor descriptor = descriptors[i];
+    fontSprites[i] = CreateSprite(1.0f, NewVec2(100.0f, 100.0f), descriptor.width, descriptor.height);
+    fontSprites[i].vertices[0].textureCoordinate[0] = descriptor.textureCoordinate[0];
+    fontSprites[i].vertices[0].textureCoordinate[1] = descriptor.textureCoordinate[1];
+    fontSprites[i].vertices[1].textureCoordinate[0] = descriptor.textureCoordinate[2];
+    fontSprites[i].vertices[1].textureCoordinate[1] = descriptor.textureCoordinate[3];
+    fontSprites[i].vertices[2].textureCoordinate[0] = descriptor.textureCoordinate[4];
+    fontSprites[i].vertices[2].textureCoordinate[1] = descriptor.textureCoordinate[5];
+    fontSprites[i].vertices[3].textureCoordinate[0] = descriptor.textureCoordinate[6];
+    fontSprites[i].vertices[3].textureCoordinate[1] = descriptor.textureCoordinate[7];
+  }
 }
 
 void Init(engine_memory memory, unsigned int width, unsigned int height)
@@ -289,10 +330,8 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
   loaded_bitmap *fontAtlasBitmap = (loaded_bitmap *)engineState->fontAsset.pWrapper->asset;
   engineState->fontAtlas = BuildTextureFromBitmapNoFree(*fontAtlasBitmap, 1);
 
-  //TODO(Noah): Create sprites from font atlas which correspond to each character
-  //load in the texture uv's into sprite
-
-  LoadFontSpritesFromAsset();
+  LoadFontSpritesFromAsset(engineState->fontAsset, engineState->fontSprites);
+  engineState->batchRenderer2D->textureAtlas = engineState->fontAtlas;
 
   engineState->defaultObject.material.setTexture(engineState->defaultTexture);
   engineState->defaultObject.transform.setScale(1.0f, 1.0f, 1.0f);
@@ -311,6 +350,7 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
   printf("obj time: %fms\n", duration * 1000.0f);
 
   engineState->suzanne.material.setTexture(engineState->defaultTexture);
+  engineState->character = '?';
 }
 
 void Update(engine_memory memory, user_input userInput)
@@ -360,7 +400,7 @@ void Update(engine_memory memory, user_input userInput)
   //render gui
   BeginBatchRenderer2D(engineState->batchRenderer2D);
 
-  Submit(engineState->batchRenderer2D, &engineState->defaultSprite);
+  Submit(engineState->batchRenderer2D, &engineState->fontSprites[GetIndexFromCharacter(engineState->character)]);
 
   EndBatchRenderer2D(engineState->batchRenderer2D);
   Flush(engineState->batchRenderer2D, engineState->guiCamera);
@@ -368,6 +408,16 @@ void Update(engine_memory memory, user_input userInput)
   memory.EndClock();
   float duration = memory.GetClockDeltaTime();
   printf("update time: %fms\n", duration * 1000.0f);
+  engineState->elapsedTime += duration;
+  if (engineState->elapsedTime > 0.8f)
+  {
+    engineState->character += 1;
+    engineState->elapsedTime = 0.0f;
+    if (engineState->character == 'u')
+    {
+      engineState->character = '?';
+    }
+  }
 }
 
 void Clean(engine_memory memory)

@@ -111,6 +111,8 @@ void Flush(batch_renderer_2D *batchRenderer2D, camera cam)
   batchRenderer2D->defaultShader.bind();
   cam.bind(batchRenderer2D->defaultShader);
   batchRenderer2D->indexBuffer.bind();
+  batchRenderer2D->textureAtlas.bind();
+  batchRenderer2D->defaultShader.setUniform1i("utexture", batchRenderer2D->textureAtlas.slot);
 
   glDrawElements(GL_TRIANGLES, batchRenderer2D->indexBuffer.count, GL_UNSIGNED_INT, 0);
 

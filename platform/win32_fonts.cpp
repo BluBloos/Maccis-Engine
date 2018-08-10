@@ -39,14 +39,6 @@ INTERNAL loaded_bitmap BuildCharacterBitmap(read_file_result fontFile, char char
   return result;
 }
 
-struct character_desriptor
-{
-  float textureCoordinate[8]; //a character has 8 texture coordinates into the atlas
-  unsigned int width;
-  unsigned int height;
-  //ascenders and descenders
-};
-
 #if 0
 INTERNAL loaded_asset BuildFontAsset(platform_read_file *ReadFile, platform_free_file *FreeFile, platform_write_file *WriteFile,
   memory_arena *arena, char * font, float pixelHeight)
@@ -138,37 +130,37 @@ INTERNAL loaded_asset BuildFontAsset(platform_read_file *ReadFile, platform_free
       totalHeight += tallestBitmap; //add the height of the last line to the total height
       tallestBitmap = currentBitmap.height; //set the talles bitmap to the height of the wrapped bitmap
 
-      vec2 topLeftVertex = NewVec2(0.0f, (float)totalHeight);
+      vec2 topLeftVertex = NewVec2(0.0f, (float)totalHeight + currentBitmap.height);
       //vertex 0
       descriptor->textureCoordinate[0] = 0.0f;
-      descriptor->textureCoordinate[1] = ((topLeftVertex.y + currentBitmap.height) * -1.0f + atlas.height)  / atlas.height;
+      descriptor->textureCoordinate[1] = (topLeftVertex.y - currentBitmap.height)  / atlas.height;
       //vertex 1
-      descriptor->textureCoordinate[2] = currentBitmap.width / atlas.width;
-      descriptor->textureCoordinate[3] = ((topLeftVertex.y + currentBitmap.height) * -1.0f + atlas.height) / atlas.height;
+      descriptor->textureCoordinate[2] = (float)currentBitmap.width / atlas.width;
+      descriptor->textureCoordinate[3] = (topLeftVertex.y - currentBitmap.height)  / atlas.height;
       //vertex 2
-      descriptor->textureCoordinate[4] = currentBitmap.width / atlas.width;
-      descriptor->textureCoordinate[5] = (-topLeftVertex.y + atlas.height) / atlas.height;
+      descriptor->textureCoordinate[4] = (float)currentBitmap.width / atlas.width;
+      descriptor->textureCoordinate[5] = topLeftVertex.y / atlas.height;
       //vertex 3
       descriptor->textureCoordinate[6] = 0.0f;
-      descriptor->textureCoordinate[7] = (-topLeftVertex.y + atlas.height) / atlas.height;
+      descriptor->textureCoordinate[7] = topLeftVertex.y / atlas.height;
     }
     else
     {
       DrawBitmapUnchecked(currentBitmap, pixelPointer, atlas.width);
 
-      vec2 topLeftVertex = NewVec2((float)currentX, (float)totalHeight);
+      vec2 topLeftVertex = NewVec2((float)currentX - currentBitmap.width, (float)totalHeight + currentBitmap.height);
       //vertex 0
       descriptor->textureCoordinate[0] = topLeftVertex.x / atlas.width;
-      descriptor->textureCoordinate[1] = ((topLeftVertex.y + currentBitmap.height) * -1.0f + atlas.height) / atlas.height;
+      descriptor->textureCoordinate[1] = (topLeftVertex.y - currentBitmap.height) / atlas.height;
       //vertex 1
       descriptor->textureCoordinate[2] = (topLeftVertex.x + currentBitmap.width) / atlas.width;
-      descriptor->textureCoordinate[3] = ((topLeftVertex.y + currentBitmap.height) * -1.0f + atlas.height) / atlas.height;
+      descriptor->textureCoordinate[3] = (topLeftVertex.y - currentBitmap.height) / atlas.height;
       //vertex 2
       descriptor->textureCoordinate[4] = (topLeftVertex.x + currentBitmap.width) / atlas.width;
-      descriptor->textureCoordinate[5] = (-topLeftVertex.y + atlas.height) / atlas.height;
+      descriptor->textureCoordinate[5] = topLeftVertex.y / atlas.height;
       //vertex 3
       descriptor->textureCoordinate[6] = topLeftVertex.x / atlas.width;
-      descriptor->textureCoordinate[7] = (-topLeftVertex.y + atlas.height) / atlas.height;
+      descriptor->textureCoordinate[7] = topLeftVertex.y / atlas.height;
     }
 
     //set character descriptor values

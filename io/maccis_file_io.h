@@ -32,5 +32,23 @@ struct bitmap_header
 	int Height;          /* Image height in pixels */
 	unsigned short Planes;          /* Number of color planes */
 	unsigned short BitsPerPixel;    /* Number of bits per pixel */
+  unsigned int biCompression; //specfies type of compression to be used
+  unsigned int biSizeImage; //can be set to 0 for uncompressed RGB bitmaps
+  int biXPelsPerMeter; //horizontal resolution in pixels per meter
+  int biYPelsPerMeter; //vertical resoltion in pixels per meter
+  unsigned int biClrUsed; //specifies color indices used in color table
+  unsigned int biClrImportant; //specifies color indices that are important
+  char rgbBlue;
+  char rgbGreen;
+  char rgbRed;
+  char rgbReserved;
 };
 #pragma pack(pop)
+
+struct character_desriptor
+{
+  float textureCoordinate[8]; //a character has 8 texture coordinates into the atlas
+  unsigned int width;
+  unsigned int height;
+  //ascenders and descenders
+};

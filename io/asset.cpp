@@ -170,6 +170,23 @@ loaded_asset LoadAsset(platform_read_file *ReadFile, platform_free_file *FreeFil
   return asset;
 }
 
+void ParseAsset(loaded_asset *asset, asset_wrapper *wrappers)
+{
+  asset_wrapper *pWrapper = asset->pWrapper;
+  unsigned int index = 0;
+  while(pWrapper)
+  {
+    wrappers[index++] = *pWrapper;
+    if (pWrapper->pNext)
+    {
+      pWrapper = pWrapper->pNext;
+    } else
+    {
+      break;
+    }
+  }
+}
+
 void ParseAssetOfBitmapList(loaded_asset *asset, loaded_bitmap *bitmaps)
 {
   asset_wrapper *pWrapper = asset->pWrapper;
