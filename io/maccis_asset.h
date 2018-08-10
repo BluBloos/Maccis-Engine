@@ -1,6 +1,6 @@
 enum asset_types
 {
-  ASSET_BITMAP, ASSET_RAW_MODEL, ASSET_FLOAT_ARRAY
+  ASSET_BITMAP, ASSET_RAW_MODEL, ASSET_STRUCT_ARRAY
 };
 
 struct asset_wrapper

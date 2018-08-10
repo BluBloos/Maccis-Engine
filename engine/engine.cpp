@@ -234,6 +234,12 @@ INTERNAL renderable_2D CreateSpriteFromTexture(float uniformScale, vec2 pos,
   return renderable;
 }
 
+void LoadFontSpritesFromAsset(loaded_asset asset, renderable_2D *fontSprites)
+{
+  unsigned int index = 0;
+  for (unsigned int)
+}
+
 void Init(engine_memory memory, unsigned int width, unsigned int height)
 {
   engine_state *engineState = (engine_state *)memory.storage;
@@ -244,9 +250,6 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
   engineState->fontAsset = LoadAsset(memory.ReadFile, memory.FreeFile,
     &engineState->memoryArena,
     MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\arial.asset",stringBuffer));
-
-  //load bitmaps from asset into bitmap list
-  ParseAssetOfBitmapList(&engineState->fontAsset, engineState->font);
 
   //load in the 2D shader
   read_file_result f1 = memory.ReadFile(MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\2D_shader.vert", stringBuffer));
@@ -283,14 +286,15 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
   //create textures
   engineState->defaultTexture = CreateTexture(memory.ReadFile, memory.FreeFile,
     MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\test.bmp", stringBuffer), 0);
-  engineState->testTexture = BuildTextureFromBitmapNoFree(
-    GetCharacterFromFont(engineState->font, 'A'), 1);
+  loaded_bitmap *fontAtlasBitmap = (loaded_bitmap *)engineState->fontAsset.pWrapper->asset;
+  engineState->fontAtlas = BuildTextureFromBitmapNoFree(*fontAtlasBitmap, 1);
 
-  engineState->defaultSprite = CreateSpriteFromTexture(1,
-    NewVec2((float)engineState->defaultTexture.localTexture.width / 2,
-    (float)engineState->defaultTexture.localTexture.height / 2), engineState->defaultTexture);
+  //TODO(Noah): Create sprites from font atlas which correspond to each character
+  //load in the texture uv's into sprite
 
-  engineState->defaultObject.material.setTexture(engineState->testTexture);
+  LoadFontSpritesFromAsset();
+
+  engineState->defaultObject.material.setTexture(engineState->defaultTexture);
   engineState->defaultObject.transform.setScale(1.0f, 1.0f, 1.0f);
   engineState->defaultObject.transform.setPosition(0.0f, 0.0f, -5.0f);
 
@@ -340,7 +344,7 @@ void Update(engine_memory memory, user_input userInput)
   {
     engineState->mainCamera.translateLocal(0.0f, speed, 0.0f);
   }
-  if (userInput.keyStates[MACCIS_MOUSE_MIDDLE].endedDown)
+  if (userInput.keyStates[MACCIS_MOUSE_LEFT].endedDown)
   {
     engineState->mainCamera.rotate(0.0f, userInput.mouseDX / 5, 0.0f);
     engineState->mainCamera.rotate(-userInput.mouseDY / 5, 0.0f, 0.0f);

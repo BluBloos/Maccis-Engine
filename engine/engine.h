@@ -427,7 +427,7 @@ struct engine_state
   //TODO(Noah): need the ability to free allocated memory on memoryArena
   memory_arena memoryArena;
   texture defaultTexture;
-  texture testTexture;
+  texture fontAtlas;
   game_object defaultObject;
   game_object suzanne;
   camera mainCamera;
@@ -436,6 +436,8 @@ struct engine_state
   loaded_asset fontAsset;
   loaded_asset monkeyAsset;
   //NOTE(Noah): unless otherwise specified by the game the batch renderer is not initialized
+  //thats why it's a pointer
   batch_renderer_2D *batchRenderer2D;
-  renderable_2D defaultSprite;
+  //TODO(Noah): Change this number from 90
+  renderable_2D fontSprites[90];
 };

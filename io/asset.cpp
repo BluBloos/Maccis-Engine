@@ -56,12 +56,13 @@ void PushBitmapToAsset(loaded_bitmap bitmap, loaded_asset *asset, memory_arena *
   bitmapWrapper->assetSize = bitmap.width * bitmap.height * sizeof(unsigned int) + sizeof(loaded_bitmap);
 }
 
-void PushFloatArrayToAsset(float *array, unsigned int arrayCount, loaded_asset *asset, memory_arena *arena)
+void PushStructArrayToAsset(void *array, unsigned arraySize,
+  loaded_asset *asset, memory_arena *arena)
 {
-  asset_wrapper *floatWrapper = AppendToAsset(arena, asset, arrayCount * sizeof(float));
-  memcpy(floatWrapper->asset, array, arrayCount * sizeof(float));
-  floatWrapper->assetType = ASSET_FLOAT_ARRAY;
-  floatWrapper->assetSize = arrayCount * sizeof(float);
+  asset_wrapper *arrayWrapper = AppendToAsset(arena, asset, arraySize);
+  memcpy(arrayWrapper->asset, array, arraySize);
+  arrayWrapper->assetType = ASSET_STRUCT_ARRAY;
+  arrayWrapper->assetSize = arraySize;
 }
 
 void WriteAsset(platform_write_file *WriteFile, memory_arena *arena, loaded_asset *asset, char *fileName)
@@ -82,9 +83,10 @@ void WriteAsset(platform_write_file *WriteFile, memory_arena *arena, loaded_asse
   pWrapper = asset->pWrapper;
   for (unsigned int i = 0; i < asset->count; i++)
   {
-    switch (pWrapper->assetType) {
-      *scan = pWrapper->assetType;
-      scan += sizeof(unsigned int);
+    *scan = pWrapper->assetType;
+    scan += sizeof(unsigned int);
+    switch (pWrapper->assetType)
+    {
       case ASSET_BITMAP:
       {
         memcpy(scan, pWrapper->asset, sizeof(loaded_bitmap));
@@ -103,7 +105,7 @@ void WriteAsset(platform_write_file *WriteFile, memory_arena *arena, loaded_asse
         memcpy(scan, model.indices, model.indexCount * sizeof(unsigned int));
         scan += model.indexCount * sizeof(unsigned int);
       } break;
-      case ASSET_FLOAT_ARRAY:
+      case ASSET_STRUCT_ARRAY:
       {
         *(unsigned int *)scan = pWrapper->assetSize;
         scan += sizeof(unsigned int);
@@ -154,11 +156,12 @@ loaded_asset LoadAsset(platform_read_file *ReadFile, platform_free_file *FreeFil
         scan += indexSize;
         PushRawModelToAsset(*model, &asset, arena);
       } break;
-      case ASSET_FLOAT_ARRAY:
+      case ASSET_STRUCT_ARRAY:
       {
-        unsigned int floatCount = *(unsigned int *)scan;
+        unsigned int arraySize = *(unsigned int *)scan;
         scan += sizeof(unsigned int);
-        PushFloatArrayToAsset((float *)scan, floatCount, &asset, arena);
+        PushStructArrayToAsset(scan, arraySize, &asset, arena);
+        scan += arraySize;
       } break;
     }
   }

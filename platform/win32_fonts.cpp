@@ -42,6 +42,8 @@ INTERNAL loaded_bitmap BuildCharacterBitmap(read_file_result fontFile, char char
 struct character_desriptor
 {
   float textureCoordinate[8]; //a character has 8 texture coordinates into the atlas
+  unsigned int width;
+  unsigned int height;
   //ascenders and descenders
 };
 
@@ -168,6 +170,12 @@ INTERNAL loaded_asset BuildFontAsset(platform_read_file *ReadFile, platform_free
       descriptor->textureCoordinate[6] = topLeftVertex.x / atlas.width;
       descriptor->textureCoordinate[7] = (-topLeftVertex.y + atlas.height) / atlas.height;
     }
+
+    //set character descriptor values
+    descriptor->width = currentBitmap.width;
+    descriptor->height = currentBitmap.height;
+
+    //advance the pixel pointer
     pixelPointer += currentBitmap.width; //advance the pixel pointer by the width of the drawn bitmap
 
     //recaculate the tallest bitmapo agaisnt drawn bitmap
@@ -180,7 +188,7 @@ INTERNAL loaded_asset BuildFontAsset(platform_read_file *ReadFile, platform_free
   //NOTE(Noah): the descriptors are stored into the asset via a float array which will not support other data we wish to store into the descriptors
   //push atlas and character descriptor array into the asset
   PushBitmapToAsset(atlas, &asset, arena);
-  PushFloatArrayToAsset((float *)descriptors, 127 - 33, &asset, arena);
+  PushStructArrayToAsset((void *)descriptors, sizeof(character_desriptor) * (127 - 33), &asset, arena);
 
   //TODO(Noah): clean up the temporary memory that was used in the arena
   //clean up memory and return
