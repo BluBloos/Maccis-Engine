@@ -34,6 +34,30 @@ void DrawBitmapUnchecked(loaded_bitmap bitmap, unsigned int *pixelPointer, unsig
 
 INTERNAL bool globalRunning = true;
 
+LRESULT CALLBACK Win32WindowProc(HWND window,
+  UINT message,
+  WPARAM wParam,
+  LPARAM lParam)
+{
+  LRESULT result = 0;
+
+  switch(message)
+	{
+		case WM_DESTROY:
+		{
+			//TODO(Noah): Handle as error
+			globalRunning = false;
+		} break;
+		case WM_CLOSE:
+		{
+			//TODO(Noah): Handle as message to user
+			globalRunning = false;
+		} break;
+  }
+
+  return result;
+}
+
 int main()
 {
   printf("Welcome to the Maccis-Engine command line interface! Type 'help' for help\n");
@@ -60,18 +84,20 @@ int main()
       printf("Enter a font name\n");
       scanf("%s", stringBuffer);
 
-      //build the font asset
-      loaded_asset asset = BuildFontAsset(Win32ReadFile, Win32FreeFile, Win32WriteFile,
-        &arena, stringBuffer, 60.0f);
+          //build the font asset
+          loaded_asset asset = BuildFontAsset(Win32ReadFile, Win32FreeFile, Win32WriteFile,
+            &arena, stringBuffer, 60.0f);
 
-      printf("Enter a file name to save to\n");
-      scanf("%s", stringBuffer);
+          printf("Enter a file name to save to\n");
+          scanf("%s", stringBuffer);
 
-      WriteAsset(Win32WriteFile, &arena, &asset, stringBuffer);
+          WriteAsset(Win32WriteFile, &arena, &asset, stringBuffer);
 
-      //output debug bitmap so we can see what the bitmap actually looks like to make sure the font is like ok fam!
-      loaded_bitmap *bitmap = (loaded_bitmap *)asset.pWrapper->asset;
-      SaveBitmap("C:\\dev\\Maccis-Engine\\res\\fontAtlas.bmp", Win32WriteFile, *bitmap, &arena);
+          //output debug bitmap so we can see what the bitmap actually looks like to make sure the font is like ok fam!
+          loaded_bitmap *bitmap = (loaded_bitmap *)asset.pWrapper->asset;
+          SaveBitmap("C:\\dev\\Maccis-Engine\\res\\fontAtlas.bmp", Win32WriteFile, *bitmap, &arena);
+
+
     }
 		else if (StringEquals(stringBuffer, "obj"))
 		{

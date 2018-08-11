@@ -12,7 +12,6 @@
 #include <maccis.h> //global to everything
 #include <maccis_math.h> //everything else prefixed with maccis is optionally global
 #include <maccis_strings.h>
-#include <win32.h>
 #include <maccis_user_input.h>
 #include <platform.h>
 #include <maccis_file_io.h>
@@ -20,6 +19,7 @@
 
 #include <engine.cpp> //the engine is a service to the platform
 #include <win32_file_io.cpp>
+#include <win32.h>
 
 #define MAX_CONSOLE_LINES 500
 typedef BOOL WINAPI wgl_swap_interval_ext(int interval);
@@ -362,6 +362,36 @@ int CALLBACK WinMain(HINSTANCE instance,
       engineMemory.EndClock = Win32EndClock;
       engineMemory.GetClockDeltaTime = Win32GetClockDeltaTime;
 
+      engine_state *engineState = (engine_state *)engineMemory.storage;
+      engineState->memoryArena.init((char *)engineMemory.storage + sizeof(engine_state), engineMemory.storageSize - sizeof(engine_state));
+
+      /*//////////////////////
+      //TEMPORARY BUILDING OF FONT!
+      char fontName[MAX_PATH];
+      read_file_result fileResult = Win32ReadFile(MaccisCatStringsUnchecked(win32FilePath, "config\\font.txt", fontName));
+      if(fileResult.content)
+      {
+        CloneString((char *)fileResult.content, fontName, fileResult.contentSize);
+      } else
+      {
+        //TODO(Noah): logging: we could not find the font configuration file!
+      }
+
+      //Im going to need the file to save to
+      //and im going to need the font name!
+
+      //build the font asset
+      loaded_asset asset = BuildFontAsset(Win32ReadFile, Win32FreeFile, Win32WriteFile,
+        &engineState->memoryArena, fontName, 60.0f);
+
+      //TODO(Noah): don't save to font.asset since that assumes that we are only going to have one font being used during runtime!
+      WriteAsset(Win32WriteFile, &engineState->memoryArena, &asset, MaccisCatStringsUnchecked(win32FilePath, "res\\font.asset", fontName));
+
+      //output debug bitmap so we can see what the bitmap actually looks like to make sure the font is like ok fam!
+      loaded_bitmap *bitmap = (loaded_bitmap *)asset.pWrapper->asset;
+      SaveBitmap(MaccisCatStringsUnchecked(win32FilePath, "res\\fontAtlas.bmp", fontName), Win32WriteFile, *bitmap, &engineState->memoryArena);
+      ////////////////////////////////////*/
+
       Init(engineMemory, rect.right - rect.left, rect.bottom - rect.top);
 
       int lastMouseX, lastMouseY;
@@ -383,6 +413,7 @@ int CALLBACK WinMain(HINSTANCE instance,
 
       Clean(engineMemory);
       ReleaseDC(windowHandle, dc);
+      VirtualFree(engineMemory.storage, engineMemory.storageSize, MEM_RELEASE);
     }
   }
 }
