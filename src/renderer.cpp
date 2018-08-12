@@ -145,17 +145,17 @@ void DebugPushText(char *string, batch_renderer_2D *batchRenderer2D, loaded_font
   for (unsigned int i = 0; i < stringLength; i++)
   {
     char character = *scan;
-    if (character == ' ')
-    {
-      xOffset += 10.0f; //eh?
-    } else
+
+    if (prevCharacter != 0)
     {
       xOffset += GetHorizontalAdvanceForPair(font, prevCharacter, character);
-      renderable_2D sprite = fontSprites[GetIndexFromCharacter(font, character)];
-      sprite.position = NewVec2(xOffset + sprite.width * sprite.alignPercentage[0], baseline - sprite.height * sprite.alignPercentage[1]);
-      Submit(batchRenderer2D, sprite);
-      //xOffset += sprite.width + 1.0f;
     }
+
+    renderable_2D sprite = fontSprites[GetIndexFromCharacter(font, character)];
+    sprite.position = NewVec2(xOffset + sprite.width * sprite.alignPercentage[0], baseline - sprite.height * sprite.alignPercentage[1]);
+    Submit(batchRenderer2D, sprite);
+      //xOffset += sprite.width + 1.0f;
+
     prevCharacter = *scan;
     scan++;
   }

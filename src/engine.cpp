@@ -6,6 +6,8 @@ TODO(Noah):
 -support multiple graphics API
 -implement pseudo-game for the support of different test frameworks
 -implement a main menu for selecting through the various test frameworks!
+-implement fonts aligning with the left edge
+-implement a basic debugger which prints to the top left using our new font system
 */
 
 #include <engine.h>
@@ -431,7 +433,7 @@ void Update(engine_memory memory, user_input userInput)
   BeginBatchRenderer2D(engineState->batchRenderer2D);
 
   //Submit(engineState->batchRenderer2D, engineState->fontSprites[GetIndexFromCharacter(engineState->character)]);
-  DebugPushText("qwertyuiopasdfghjklzxcvbnm1234567890[]'.?<>,'", engineState->batchRenderer2D, &engineState->font);
+  DebugPushText("GameUpdateAndRender", engineState->batchRenderer2D, &engineState->font);
 
   EndBatchRenderer2D(engineState->batchRenderer2D);
   Flush(engineState->batchRenderer2D, engineState->guiCamera);
