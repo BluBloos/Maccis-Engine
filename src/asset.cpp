@@ -65,6 +65,14 @@ void PushStructArrayToAsset(void *array, unsigned arraySize,
   arrayWrapper->assetSize = arraySize;
 }
 
+void PushFontToAsset(loaded_font *font, loaded_asset *asset, memory_arena *arena)
+{
+  asset_wrapper *fontWrapper = AppendToAsset(arena, asset, sizeof(loaded_font));
+  memcpy(fontWrapper->asset, font, sizeof(loaded_font));
+  fontWrapper->assetType = ASSET_FONT;
+  fontWrapper->assetSize = sizeof(loaded_font);
+}
+
 void WriteAsset(platform_write_file *WriteFile, memory_arena *arena, loaded_asset *asset, char *fileName)
 {
   unsigned int assetSize = asset->count * sizeof(unsigned int);
@@ -110,6 +118,12 @@ void WriteAsset(platform_write_file *WriteFile, memory_arena *arena, loaded_asse
         *(unsigned int *)scan = pWrapper->assetSize;
         scan += sizeof(unsigned int);
         memcpy(scan, pWrapper->asset, pWrapper->assetSize);
+        scan += pWrapper->assetSize;
+      } break;
+      case ASSET_FONT:
+      {
+        memcpy(scan, pWrapper->asset, sizeof(loaded_font));
+        scan += sizeof(loaded_font);
       } break;
     }
     pWrapper = pWrapper->pNext;
@@ -162,6 +176,12 @@ loaded_asset LoadAsset(platform_read_file *ReadFile, platform_free_file *FreeFil
         scan += sizeof(unsigned int);
         PushStructArrayToAsset(scan, arraySize, &asset, arena);
         scan += arraySize;
+      } break;
+      case ASSET_FONT:
+      {
+        loaded_font *font = (loaded_font *)scan;
+        scan += sizeof(loaded_font);
+        PushFontToAsset(font, &asset, arena);
       } break;
     }
   }

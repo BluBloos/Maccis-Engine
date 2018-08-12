@@ -34,7 +34,7 @@ void DrawBitmapUnchecked(loaded_bitmap bitmap, unsigned int *pixelPointer, unsig
 
 #if DONT_USE_WINDOWS_FONTS
 INTERNAL loaded_bitmap BuildCharacterBitmap(read_file_result fontFile, char character, float pixelHeight,
-  memory_arena *arena)
+  memory_arena *arena, character_desriptor* descriptorOut, loaded_font *outFont)
 {
   loaded_bitmap result = {};
 
@@ -71,55 +71,39 @@ INTERNAL loaded_bitmap BuildCharacterBitmap(read_file_result fontFile, char char
   return result;
 }
 #else
-INTERNAL loaded_bitmap BuildCharacterBitmap(char *path, char *fontName,
-  char character, float pixelHeight, memory_arena *arena)
+#define MAX_WIDTH 1024
+#define MAX_HEIGHT 1024
+INTERNAL loaded_bitmap BuildCharacterBitmap(FILE *file, win32_font_context *fontContext, unsigned int character,
+   memory_arena *arena, character_desriptor* descriptorOut, unsigned int firstChar)
 {
   loaded_bitmap result = {};
-
-  PERSISTENT HDC deviceContext = 0;
-  if (!deviceContext)
-  {
-    int addedFonts = AddFontResourceEx(path, FR_PRIVATE, 0);
-    //printf("added fonts: %d\n", addedFonts);
-    HFONT font = CreateFontA((int)pixelHeight, 0, 0, 0,
-      FW_NORMAL, FALSE, FALSE, FALSE,
-      DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
-      CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
-      DEFAULT_PITCH | FF_DONTCARE, fontName);
-    deviceContext = CreateCompatibleDC(NULL);
-    WIN32_CALL(deviceContext)
-    {
-      HBITMAP bitmap = CreateCompatibleBitmap(deviceContext, 1024, 1024);
-      SelectObject(deviceContext, bitmap);
-      SelectObject(deviceContext, font);
-
-      TEXTMETRIC textMetric;
-      GetTextMetrics(deviceContext, &textMetric);
-    }
-  }
 
   SIZE size = {};
   wchar_t cheesePoint = (wchar_t)character;
 
-  GetTextExtentPoint32W(deviceContext, &cheesePoint, 1, &size);
+  GetTextExtentPoint32W(fontContext->dc, &cheesePoint, 1, &size);
 
   int width = size.cx;
   int height = size.cy;
 
-  SetTextColor(deviceContext, RGB(255, 255, 255));
-  SetBkColor(deviceContext, RGB(0,0,0));
-  TextOutW(deviceContext, 0, 0, &cheesePoint, 1);
+  SetTextColor(fontContext->dc, RGB(255, 255, 255));
+  SetBkColor(fontContext->dc, RGB(0,0,0));
+  TextOutW(fontContext->dc, 0, 0, &cheesePoint, 1);
 
   int minX = 10000;
   int maxX = -10000;
   int minY = 10000;
   int maxY = -10000;
+
+  unsigned int *row = (unsigned int *)fontContext->bPixels + MAX_WIDTH * (MAX_HEIGHT - 1);
   for (int y = 0; y < height; y++)
   {
+    unsigned int *pixel = row;
     for (int x = 0; x < width; x++)
     {
-      COLORREF pixel = GetPixel(deviceContext, x, y);
-      if (pixel & 0xFF) //there is pixel!
+      //COLORREF pixel = GetPixel(deviceContext, x, y);
+
+      if (*pixel++ & 0xFF) //there is pixel!
       {
         if (x > maxX)
         {
@@ -138,25 +122,40 @@ INTERNAL loaded_bitmap BuildCharacterBitmap(char *path, char *fontName,
         }
       }
     }
+    row -= MAX_WIDTH;
   }
 
-  width = maxX - minX + 1;
-  height = maxY - minY + 1;
-
-  //Allocate a bitmap so we can fill it!
-  result = MakeEmptyBitmap(arena, width, height);
-
-  unsigned int *destRow = result.pixelPointer + (height - 1) * width;
-  for (unsigned int y = minY; y < maxY + 1; y++)
+  if (minX != 10000) //did we find anything?
   {
-    unsigned int *dest = (unsigned int *)destRow;
-    for (unsigned int x = minX; x < maxX + 1; x++)
+    width = maxX - minX + 1;
+    height = maxY - minY + 1;
+
+    //log the letter widths
     {
-      COLORREF pixel = GetPixel(deviceContext, x, y);
-      unsigned char alpha =  (unsigned char)(pixel & 0xFF);
-      *dest++ = alpha << 24 | alpha << 16 | alpha << 8 | alpha;
+      fprintf(file,"letter: %d, width: %d\n", character, width);
     }
-    destRow -= width;
+
+    descriptorOut->alignPercentage[0] = (float)minX / (float)width;
+    descriptorOut->alignPercentage[1] = ((float)fontContext->metrics.tmDescent - (size.cy - maxY)) / (float)height;
+
+    //Allocate a bitmap so we can fill it!
+    result = MakeEmptyBitmap(arena, width, height);
+
+    unsigned int *destRow = result.pixelPointer + (height - 1) * width;
+    unsigned int *sourceRow = (unsigned int *)fontContext->bPixels + (MAX_HEIGHT - 1 - minY) * MAX_WIDTH;
+    for (unsigned int y = minY; y < maxY + 1; y++)
+    {
+      unsigned int *source = sourceRow + minX;
+      unsigned int *dest = destRow;
+      for (unsigned int x = minX; x < maxX + 1; x++)
+      {
+        //COLORREF pixel = GetPixel(deviceContext, x, y);
+        unsigned char alpha =  (unsigned char)(*source++ & 0xFF);
+        *dest++ = alpha << 24 | alpha << 16 | alpha << 8 | alpha;
+      }
+      sourceRow -= MAX_WIDTH;
+      destRow -= width;
+    }
   }
 
   //finally return the bitmap which was so painstakingly crafted!
@@ -164,12 +163,98 @@ INTERNAL loaded_bitmap BuildCharacterBitmap(char *path, char *fontName,
 }
 #endif
 
-#include <temp.cpp>
+INTERNAL void BuildFontMeta(char *path, char *fontName, float pixelHeight,
+  win32_font_context *fontContext, loaded_font *outFont, memory_arena *arena)
+{
+  AddFontResourceEx(path, FR_PRIVATE, 0);
 
+  fontContext->font = CreateFontA((int)pixelHeight, 0, 0, 0,
+    FW_NORMAL, FALSE, FALSE, FALSE,
+    DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+    CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
+    DEFAULT_PITCH | FF_DONTCARE, fontName);
+
+  fontContext->dc = CreateCompatibleDC(NULL);
+
+  BITMAPINFO info = {};
+  info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+  info.bmiHeader.biWidth = MAX_WIDTH;
+  info.bmiHeader.biHeight = MAX_HEIGHT;
+  info.bmiHeader.biPlanes = 1;
+  info.bmiHeader.biBitCount = 32;
+  info.bmiHeader.biCompression = BI_RGB;
+
+  fontContext->bitmap = CreateDIBSection(fontContext->dc, &info, DIB_RGB_COLORS, (void **)&fontContext->bPixels, 0, 0);
+
+  SelectObject(fontContext->dc, fontContext->bitmap);
+  SelectObject(fontContext->dc, fontContext->font);
+
+  GetTextMetrics(fontContext->dc, &fontContext->metrics);
+  outFont->lineHeight = fontContext->metrics.tmHeight;
+  outFont->firstChar = Max((float)fontContext->metrics.tmFirstChar, 33);
+  outFont->lastChar = Min((float)fontContext->metrics.tmLastChar, 254);
+  outFont->codePointCount = outFont->lastChar;
+  outFont->horizontalAdvance = (float *)arena->push(sizeof(float) * outFont->codePointCount * outFont->codePointCount);
+
+  //Initialize kerning table
+  fontContext->abc = (ABC *)arena->push(sizeof(ABC) * (outFont->codePointCount));
+  GetCharABCWidthsW(fontContext->dc, 0, outFont->codePointCount - 1, fontContext->abc);
+  for (unsigned int i = 0; i < outFont->codePointCount; i++)
+  {
+    ABC currentABC = fontContext->abc[i];
+    float w = (float)currentABC.abcA + (float)currentABC.abcB + (float)currentABC.abcC;
+    for (unsigned int j = 0; j < outFont->codePointCount; j++)
+    {
+      outFont->horizontalAdvance[i * outFont->codePointCount + j] = w;
+    }
+  }
+
+  //log out the abc's!
+  {
+    FILE *file = fopen("C:\\dev\\abc.txt","w+");
+    for (unsigned int i = 0; i < outFont->codePointCount; i++)
+    {
+      ABC currentABC = fontContext->abc[i];
+      fprintf(file,"letter: %d, a: %d, b: %d, c: %d\n", i, currentABC.abcA, currentABC.abcB, currentABC.abcC);
+    }
+    fclose(file);
+  }
+
+  //add kerning values to kerning table
+  DWORD kerningPairCount = GetKerningPairsW(fontContext->dc, 0, 0);
+  fontContext->kerningPairs = (KERNINGPAIR *)arena->push(kerningPairCount * sizeof(KERNINGPAIR));
+  GetKerningPairsW(fontContext->dc, kerningPairCount, fontContext->kerningPairs);
+  for (DWORD kerningIndex = 0; kerningIndex < kerningPairCount; kerningIndex++ )
+  {
+    //NOTE(Noah): watch the offset of 33 there bud
+    KERNINGPAIR pair = fontContext->kerningPairs[kerningIndex];
+    if(pair.wFirst < outFont->codePointCount && pair.wSecond < outFont->codePointCount)
+    {
+      outFont->horizontalAdvance[pair.wFirst * outFont->codePointCount + pair.wSecond] += (float)pair.iKernAmount;
+    }
+  }
+
+  //log out the kerning pairs!
+  {
+    FILE *file = fopen("C:\\dev\\kern.txt","w+");
+    for (DWORD kerningIndex = 0; kerningIndex < kerningPairCount; kerningIndex++ )
+    {
+      KERNINGPAIR pair = fontContext->kerningPairs[kerningIndex];
+      if(pair.wFirst < outFont->codePointCount && pair.wSecond < outFont->codePointCount)
+      {
+        fprintf(file, "letter 1: %d, letter 2: %d, kern: %d\n", pair.wFirst, pair.wSecond, pair.iKernAmount);
+      }
+    }
+    fclose(file);
+  }
+}
+
+#define PADDING 8
 INTERNAL loaded_asset BuildFontAsset(platform_read_file *ReadFile, platform_free_file *FreeFile, platform_write_file *WriteFile,
   memory_arena *arena, char * font, float pixelHeight)
 {
   loaded_asset asset = {};
+  loaded_font outFont = {};
 
   char stringBuffer[MAX_PATH];
   char stringBuffer2[MAX_PATH];
@@ -177,92 +262,96 @@ INTERNAL loaded_asset BuildFontAsset(platform_read_file *ReadFile, platform_free
   MaccisCatStringsUnchecked(stringBuffer, ".ttf", stringBuffer2);
   read_file_result fileResult = ReadFile(stringBuffer2);
 
-  loaded_bitmap characters[127 - 33] = {};
+  win32_font_context context = {};
+  BuildFontMeta(stringBuffer2, font, pixelHeight,
+      &context, &outFont, arena);
+
+  loaded_bitmap *characters = (loaded_bitmap *)arena->push(sizeof(loaded_bitmap) * outFont.codePointCount);
+  character_desriptor *descriptors = (character_desriptor *)arena->push(sizeof(character_desriptor) * outFont.codePointCount);
   unsigned int index = 0;
 
-  for (unsigned int i = 33; i < 127; i++)
+  FILE *file2 = fopen("C:\\dev\\widths.txt","w+");
+  for (unsigned int i = outFont.firstChar; i < outFont.lastChar + 1; i++)
   {
-    index = i - 33;
     //TODO(Implement freeing on the memory_arena so that we can destroy the unused bitmaps!)
     #if DONT_USE_WINDOWS_FONTS
-    characters[index] = BuildCharacterBitmap(fileResult, i, pixelHeight, arena);
+    characters[i] = BuildCharacterBitmap(fileResult, i, pixelHeight, arena, &descriptors[index], &outFont);
     #else
-    characters[index] = BuildCharacterBitmap(stringBuffer2, font, i, pixelHeight, arena);
+    characters[ii] = BuildCharacterBitmap(file2, &context, i, arena, &descriptors[index], outFont.firstChar);
     #endif
   }
-
-  unsigned int pixelPitch = 1080;
-  unsigned int tallestBitmap = 0;
-  unsigned int currentLine = 0;
-  unsigned int currentX = 0;
-  unsigned int totalHeight = 0;
-  for(unsigned int i = 0; i < 127 - 33; i++)
+  fclose(file2);
+  /*
+  //DEBUG save all the bitmaps to a file
+  for (unsigned int i = 0; i < 127 -33; i++)
   {
-    currentX += characters[i].width + PADDING;
-    if (currentX > pixelPitch)
+    char stringBuffer[MAX_PATH];
+    char stringBuffer2[MAX_PATH];
+    wsprintf(stringBuffer, "res\\%d.bmp", i);
+    SaveBitmap(MaccisCatStringsUnchecked("C:\\dev\\Maccis-Engine\\", stringBuffer, stringBuffer2), WriteFile, characters[i], arena);
+  }
+  */
+
+  //do a pseudo run
+  unsigned int pixelPitch = 1080;
+  unsigned int atlasHeight = 0;
+  unsigned int layerHeight = 0;
+  unsigned int currentX = 0;
+  for (unsigned int i = outFont.firstChar; i < outFont.lastChar + 1; i++)
+  {
+    loaded_bitmap currentBitmap = characters[i];
+    if (currentX + currentBitmap.width + PADDING < pixelPitch)
     {
-      currentX = characters[i].width + PADDING; //advance the x of the new line to be the bitmap wrapped down to it
-      currentLine += 1; //go to next line
-      totalHeight += tallestBitmap; //add the height of the last line to the total height
-      tallestBitmap = characters[i].height + PADDING; //set the talles bitmap to the height of the wrapped bitmap
-    }
-    if(tallestBitmap < characters[i].height + PADDING)
+      //draw bitmap
+      currentX += currentBitmap.width + PADDING; //advance
+      if (currentBitmap.height + PADDING > layerHeight) //did the layer height increase?
+      {
+        layerHeight = currentBitmap.height + PADDING;
+      }
+    } else
     {
-      tallestBitmap = characters[i].height + PADDING;
+      //advance to next line
+      atlasHeight += layerHeight;
+      currentX = 0;
+      layerHeight = 0;
+
+      //query again
+      if (currentX + currentBitmap.width + PADDING < pixelPitch)
+      {
+        //draw bitmap
+        currentX += currentBitmap.width + PADDING; //advance
+        if (currentBitmap.height + PADDING > layerHeight) //did the layer height increase?
+        {
+          layerHeight = currentBitmap.height + PADDING;
+        }
+      }
     }
   }
-  totalHeight += tallestBitmap;
 
-  //setup font atlas bitmap and character descriptors
+  atlasHeight += layerHeight;
+  void *mem = arena->push(sizeof(unsigned int) * pixelPitch * atlasHeight);
+
   loaded_bitmap atlas = {};
+  atlas.pixelPointer = (unsigned int *)mem;
   atlas.width = pixelPitch;
-  atlas.height = totalHeight;
-  atlas.pixelPointer = (unsigned int *)arena->push(pixelPitch * totalHeight * sizeof(unsigned int));
-  character_desriptor descriptors[127 - 33] = {};
+  atlas.height = atlasHeight;
 
-  //parse through each bitmap and clone it into the font atlas and write the texture coordinates
-  tallestBitmap = 0;
-  currentLine = 0;
-  currentX = 0;
-  totalHeight = 0;
+  pixelPitch = 1080;
+  atlasHeight = 0;
   unsigned int *pixelPointer = atlas.pixelPointer;
-  for (unsigned int i = 0; i < 127 - 33; i++)
+  layerHeight = 0;
+  currentX = 0;
+  for (unsigned int i = outFont.firstChar; i < outFont.lastChar + 1; i++)
   {
     loaded_bitmap currentBitmap = characters[i];
     character_desriptor *descriptor = &descriptors[i];
-    currentX += currentBitmap.width + PADDING;
 
-    if (currentX > pixelPitch)
+    if (currentX + currentBitmap.width + PADDING < pixelPitch)
     {
-      //TODO(Noah): add padding!
-      pixelPointer += pixelPitch - (currentX - currentBitmap.width - PADDING); //advance the pixel pointer to the start of the next line
-      pixelPointer += pixelPitch * (tallestBitmap + PADDING - 1); //advance the pixel pointer by tallestBitmap - 1 lines, which advances us to the next "line"
+      //draw bitmap
       DrawBitmapUnchecked(currentBitmap, pixelPointer, atlas.width);
 
-      currentX = currentBitmap.width + PADDING; //advance the x of the new line to be the bitmap wrapped down to it
-      currentLine += 1; //go to next lines
-      totalHeight += tallestBitmap; //add the height of the last line to the total height
-      tallestBitmap = currentBitmap.height + PADDING; //set the talles bitmap to the height of the wrapped bitmap
-
-      vec2 topLeftVertex = NewVec2(0.0f, (float)totalHeight + currentBitmap.height);
-      //vertex 0
-      descriptor->textureCoordinate[0] = 0.0f;
-      descriptor->textureCoordinate[1] = (topLeftVertex.y - currentBitmap.height)  / atlas.height;
-      //vertex 1
-      descriptor->textureCoordinate[2] = (float)currentBitmap.width / atlas.width;
-      descriptor->textureCoordinate[3] = (topLeftVertex.y - currentBitmap.height)  / atlas.height;
-      //vertex 2
-      descriptor->textureCoordinate[4] = (float)currentBitmap.width / atlas.width;
-      descriptor->textureCoordinate[5] = topLeftVertex.y / atlas.height;
-      //vertex 3
-      descriptor->textureCoordinate[6] = 0.0f;
-      descriptor->textureCoordinate[7] = topLeftVertex.y / atlas.height;
-    }
-    else
-    {
-      DrawBitmapUnchecked(currentBitmap, pixelPointer, atlas.width);
-
-      vec2 topLeftVertex = NewVec2((float)currentX - currentBitmap.width - PADDING, (float)totalHeight + currentBitmap.height);
+      vec2 topLeftVertex = NewVec2((float)currentX, (float)atlasHeight + currentBitmap.height);
       //vertex 0
       descriptor->textureCoordinate[0] = topLeftVertex.x / atlas.width;
       descriptor->textureCoordinate[1] = (topLeftVertex.y - currentBitmap.height) / atlas.height;
@@ -275,26 +364,73 @@ INTERNAL loaded_asset BuildFontAsset(platform_read_file *ReadFile, platform_free
       //vertex 3
       descriptor->textureCoordinate[6] = topLeftVertex.x / atlas.width;
       descriptor->textureCoordinate[7] = topLeftVertex.y / atlas.height;
+
+      currentX += currentBitmap.width + PADDING; //advance
+      pixelPointer += currentBitmap.width + PADDING;
+      if (currentBitmap.height + PADDING > layerHeight) //did the layer height increase?
+      {
+        layerHeight = currentBitmap.height + PADDING;
+      }
+    } else
+    {
+      //advance to next line
+      pixelPointer += pixelPitch - currentX + (layerHeight - 1) * pixelPitch;
+      atlasHeight += layerHeight;
+      currentX = 0;
+      layerHeight = 0;
+
+      //query again
+      if (currentX + currentBitmap.width + PADDING < pixelPitch)
+      {
+        //draw bitmap
+        DrawBitmapUnchecked(currentBitmap, pixelPointer, atlas.width);
+
+        vec2 topLeftVertex = NewVec2((float)currentX, (float)atlasHeight + currentBitmap.height);
+        //vertex 0
+        descriptor->textureCoordinate[0] = topLeftVertex.x / atlas.width;
+        descriptor->textureCoordinate[1] = (topLeftVertex.y - currentBitmap.height) / atlas.height;
+        //vertex 1
+        descriptor->textureCoordinate[2] = (topLeftVertex.x + currentBitmap.width) / atlas.width;
+        descriptor->textureCoordinate[3] = (topLeftVertex.y - currentBitmap.height) / atlas.height;
+        //vertex 2
+        descriptor->textureCoordinate[4] = (topLeftVertex.x + currentBitmap.width) / atlas.width;
+        descriptor->textureCoordinate[5] = topLeftVertex.y / atlas.height;
+        //vertex 3
+        descriptor->textureCoordinate[6] = topLeftVertex.x / atlas.width;
+        descriptor->textureCoordinate[7] = topLeftVertex.y / atlas.height;
+
+        currentX += currentBitmap.width + PADDING; //advance
+        pixelPointer += currentBitmap.width + PADDING;
+        if (currentBitmap.height + PADDING > layerHeight) //did the layer height increase?
+        {
+          layerHeight = currentBitmap.height + PADDING;
+        }
+      }
     }
 
-    //set character descriptor values
     descriptor->width = currentBitmap.width;
     descriptor->height = currentBitmap.height;
 
-    //advance the pixel pointer
-    pixelPointer += currentBitmap.width + PADDING; //advance the pixel pointer by the width of the drawn bitmap
-
-    //recaculate the tallest bitmapo agaisnt drawn bitmap
-    if(tallestBitmap < currentBitmap.height + PADDING)
-    {
-      tallestBitmap = currentBitmap.height + PADDING;
-    }
   }
 
   //NOTE(Noah): the descriptors are stored into the asset via a float array which will not support other data we wish to store into the descriptors
   //push atlas and character descriptor array into the asset
   PushBitmapToAsset(atlas, &asset, arena);
-  PushStructArrayToAsset((void *)descriptors, sizeof(character_desriptor) * (127 - 33), &asset, arena);
+  PushStructArrayToAsset((void *)descriptors, sizeof(character_desriptor) * (outFont.codePointCount), &asset, arena);
+  PushFontToAsset(&outFont, &asset, arena);
+
+  FILE *file = fopen("C:\\dev\\log.txt","w+");
+  for (unsigned int i = 0; i < outFont.codePointCount; i++)
+  {
+    for (unsigned int j = 0; j < outFont.codePointCount; j++)
+    {
+      float f = outFont.horizontalAdvance[i * outFont.codePointCount + j];
+      fprintf(file, "letter 1: %d, letter 2: %d, f: %f\n",i + outFont.firstChar, j + outFont.firstChar, f);
+    }
+  }
+  fclose(file);
+
+  PushStructArrayToAsset((void *)outFont.horizontalAdvance, sizeof(float) * outFont.codePointCount * outFont.codePointCount, &asset, arena);
 
   //TODO(Noah): clean up the temporary memory that was used in the arena
   //clean up memory and return
@@ -327,7 +463,7 @@ int main()
   //and im going to need the font name!
 
   //build the font asset
-  loaded_asset asset = BuildFontAsset2(Win32ReadFile, Win32FreeFile, Win32WriteFile,
+  loaded_asset asset = BuildFontAsset(Win32ReadFile, Win32FreeFile, Win32WriteFile,
     &arena, fontName, 60.0f);
 
   //TODO(Noah): don't save to font.asset since that assumes that we are only going to have one font being used during runtime!

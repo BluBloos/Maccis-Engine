@@ -4,6 +4,17 @@ struct win32_timing
   LONGLONG perfCountFrequency;
 };
 
+struct win32_font_context
+{
+  HFONT font;
+  HDC dc;
+  HBITMAP bitmap;
+  unsigned int *bPixels;
+  TEXTMETRIC metrics;
+  ABC *abc;
+  KERNINGPAIR *kerningPairs;
+};
+
 #define WIN32_CALL(code) if (code == NULL){Win32PrintError();}else
 
 void Win32PrintError()

@@ -50,5 +50,18 @@ struct character_desriptor
   float textureCoordinate[8]; //a character has 8 texture coordinates into the atlas
   unsigned int width;
   unsigned int height;
+  float alignPercentage[2];
   //ascenders and descenders
+};
+
+struct loaded_font
+{
+  //NOTE(Noah): These are dynamically allocated since different fonts have different
+  //amounts of glyphs
+  unsigned int codePointCount;
+  unsigned int firstChar;
+  unsigned int lastChar;
+  void *fontSprites;
+  float lineHeight;
+  float *horizontalAdvance;
 };

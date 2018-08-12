@@ -312,13 +312,11 @@ int CALLBACK WinMain(HINSTANCE instance,
 {
   //initialize the console
   Win32OpenConsole();
-  unsigned int version = 1;
-  printf("Maccis-Engine version %d!\n", version);
+  printf("Maccis-Engine version %d!\n", 1);
   fprintf(stdout, "stdout initialized\n");
   fprintf(stderr, "stderr initialized\n");
 
   //build the relative path
-  char stringBuffer[256];
   char win32FilePath[MAX_PATH];
   Win32GetRelativePath(win32FilePath, MAX_PATH);
 

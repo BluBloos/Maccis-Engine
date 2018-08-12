@@ -263,10 +263,30 @@ INTERNAL renderable_2D CreateSpriteFromTexture(float uniformScale, vec2 pos,
   return renderable;
 }
 
-void LoadFontSpritesFromAsset(loaded_asset asset, renderable_2D *fontSprites)
+void LoadFontFromAsset(memory_arena *arena, loaded_asset asset, loaded_font *outFont)
 {
-  asset_wrapper wrappers[2];
+  asset_wrapper wrappers[4];
   ParseAsset(&asset, wrappers);
+
+  loaded_font *sourceFont = (loaded_font *)wrappers[2].asset;
+  *outFont = *sourceFont;
+  outFont->horizontalAdvance = (float  *)wrappers[3].asset;
+
+  /*///////////
+  FILE *file = fopen("C:\\dev\\log.txt","w+");
+  for (unsigned int i = 0; i < outFont->codePointCount; i++)
+  {
+    for (unsigned int j = 0; j < outFont->codePointCount; j++)
+    {
+      float f = outFont->horizontalAdvance[i * outFont->codePointCount + j];
+      fprintf(file, "letter 1: %d, letter 2: %d, f: %f\n",i + outFont->firstChar, j + outFont->firstChar, f);
+    }
+  }
+  fclose(file);
+  ////////////////*/
+
+  outFont->fontSprites = arena->push(outFont->codePointCount * sizeof(renderable_2D));
+  renderable_2D *fontSprites = (renderable_2D *)outFont->fontSprites;
 
   character_desriptor *descriptors = (character_desriptor *)wrappers[1].asset;
   unsigned int descriptorCount = wrappers[1].assetSize / sizeof(character_desriptor);
@@ -276,6 +296,8 @@ void LoadFontSpritesFromAsset(loaded_asset asset, renderable_2D *fontSprites)
     fontSprites[i] = CreateSprite(1.0f, NewVec2(0.0f, 0.0f), descriptor.width, descriptor.height);
     fontSprites[i].width = descriptor.width;
     fontSprites[i].height = descriptor.height;
+    fontSprites[i].alignPercentage[0] = descriptor.alignPercentage[0];
+    fontSprites[i].alignPercentage[1] = descriptor.alignPercentage[1];
     fontSprites[i].vertices[0].textureCoordinate[0] = descriptor.textureCoordinate[0];
     fontSprites[i].vertices[0].textureCoordinate[1] = descriptor.textureCoordinate[1];
     fontSprites[i].vertices[1].textureCoordinate[0] = descriptor.textureCoordinate[2];
@@ -312,13 +334,15 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
   engineState->guiCamera = CreateOrthoCamera((float)width, (float)height);
   engineState->mainCamera = CreateCamera((float)width, (float)height, 90.0f);
 
-  engineState->defaultObject.mesh.vao = CreateVertexArray(); //make the vao
-  vertex_buffer vertexBuffer = CreateVertexBuffer(vertices, 16); //make the vertex buffer
-  buffer_layout bufferLayout = CreateBufferLayout(); //make a buffer layout
-  bufferLayout.push(2, GL_FLOAT); //describe the buffer layout
-  bufferLayout.push(2, GL_FLOAT);
-  engineState->defaultObject.mesh.vao.addBuffer(vertexBuffer, bufferLayout); //describe the vao
-  engineState->defaultObject.mesh.indexBuffer = CreateIndexBuffer(indices, 6);
+  {
+    engineState->defaultObject.mesh.vao = CreateVertexArray(); //make the vao
+    vertex_buffer vertexBuffer = CreateVertexBuffer(vertices, 16); //make the vertex buffer
+    buffer_layout bufferLayout = CreateBufferLayout(); //make a buffer layout
+    bufferLayout.push(2, GL_FLOAT); //describe the buffer layout
+    bufferLayout.push(2, GL_FLOAT);
+    engineState->defaultObject.mesh.vao.addBuffer(vertexBuffer, bufferLayout); //describe the vao
+    engineState->defaultObject.mesh.indexBuffer = CreateIndexBuffer(indices, 6);
+  }
 
   //load in the 3D shader
   read_file_result f3 = memory.ReadFile(MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\shader.vert", stringBuffer));
@@ -335,7 +359,8 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
   loaded_bitmap *fontAtlasBitmap = (loaded_bitmap *)engineState->fontAsset.pWrapper->asset;
   engineState->fontAtlas = BuildTextureFromBitmapNoFree(*fontAtlasBitmap, 1);
 
-  LoadFontSpritesFromAsset(engineState->fontAsset, engineState->fontSprites);
+  //create font sprites!
+  LoadFontFromAsset(&engineState->memoryArena, engineState->fontAsset, &engineState->font);
   engineState->batchRenderer2D->textureAtlas = engineState->fontAtlas;
 
   engineState->defaultObject.material.setTexture(engineState->defaultTexture);
@@ -406,7 +431,7 @@ void Update(engine_memory memory, user_input userInput)
   BeginBatchRenderer2D(engineState->batchRenderer2D);
 
   //Submit(engineState->batchRenderer2D, engineState->fontSprites[GetIndexFromCharacter(engineState->character)]);
-  DebugPushText("this is debug text!", engineState->batchRenderer2D, engineState->fontSprites);
+  DebugPushText("qwertyuiopasdfghjklzxcvbnm1234567890[]'.?<>,'", engineState->batchRenderer2D, &engineState->font);
 
   EndBatchRenderer2D(engineState->batchRenderer2D);
   Flush(engineState->batchRenderer2D, engineState->guiCamera);

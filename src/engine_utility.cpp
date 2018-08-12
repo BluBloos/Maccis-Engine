@@ -38,7 +38,14 @@ void DrawBitmapUnchecked(loaded_bitmap bitmap, unsigned int *pixelPointer, unsig
   }
 }
 
-unsigned int GetIndexFromCharacter(unsigned int character)
+unsigned int GetIndexFromCharacter(loaded_font *font, unsigned int character)
 {
-  return character - 33;
+  return character - font->firstChar;
+}
+
+float GetHorizontalAdvanceForPair(loaded_font *font, unsigned char character1, unsigned char character2)
+{
+  //do stuff here
+  float result = font->horizontalAdvance[character1 * font->codePointCount + character2];
+  return result;
 }

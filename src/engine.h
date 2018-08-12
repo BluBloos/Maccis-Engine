@@ -400,6 +400,7 @@ struct renderable_2D
   float rotation;
   unsigned int width;
   unsigned int height;
+  float alignPercentage[2];
   renderable_2D_vertex vertices[4];
 };
 
@@ -436,12 +437,11 @@ struct engine_state
   game_object suzanne;
   camera mainCamera;
   camera guiCamera;
-  loaded_bitmap font[100];
+  //loaded_bitmap font[100];
   loaded_asset fontAsset;
   loaded_asset monkeyAsset;
   //NOTE(Noah): unless otherwise specified by the game the batch renderer is not initialized
   //thats why it's a pointer
   batch_renderer_2D *batchRenderer2D;
-  //TODO(Noah): Change this number from 90
-  renderable_2D fontSprites[100];
+  loaded_font font;
 };

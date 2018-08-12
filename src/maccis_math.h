@@ -29,6 +29,28 @@ struct mat4
   };
 };
 
+inline float Min(float a, float b)
+{
+  if (a < b)
+  {
+    return a;
+  } else
+  {
+    return b;
+  }
+}
+
+inline float Max(float a, float b)
+{
+  if (a > b)
+  {
+    return a;
+  } else
+  {
+    return b;
+  }
+}
+
 inline vec2 NewVec2(float x, float y)
 {
   vec2 result = {x, y}; return result;

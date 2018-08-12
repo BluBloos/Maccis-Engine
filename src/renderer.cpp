@@ -134,11 +134,14 @@ void Flush(batch_renderer_2D *batchRenderer2D, camera cam)
   batchRenderer2D->indexBuffer.count = 0;
 }
 
-void DebugPushText(char *string, batch_renderer_2D *batchRenderer2D, renderable_2D *fontSprites)
+void DebugPushText(char *string, batch_renderer_2D *batchRenderer2D, loaded_font *font)
 {
+  renderable_2D *fontSprites = (renderable_2D *)font->fontSprites;
   unsigned int stringLength = GetStringLength(string);
   float xOffset = 100.0f;
+  float baseline = 100.0f;
   char *scan = string;
+  char prevCharacter = *scan;
   for (unsigned int i = 0; i < stringLength; i++)
   {
     char character = *scan;
@@ -147,11 +150,13 @@ void DebugPushText(char *string, batch_renderer_2D *batchRenderer2D, renderable_
       xOffset += 10.0f; //eh?
     } else
     {
-      renderable_2D sprite = fontSprites[GetIndexFromCharacter(character)];
-      sprite.position = NewVec2(xOffset, 100.0f);
+      xOffset += GetHorizontalAdvanceForPair(font, prevCharacter, character);
+      renderable_2D sprite = fontSprites[GetIndexFromCharacter(font, character)];
+      sprite.position = NewVec2(xOffset + sprite.width * sprite.alignPercentage[0], baseline - sprite.height * sprite.alignPercentage[1]);
       Submit(batchRenderer2D, sprite);
-      xOffset += sprite.width;
+      //xOffset += sprite.width + 1.0f;
     }
+    prevCharacter = *scan;
     scan++;
   }
 
