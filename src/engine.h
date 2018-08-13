@@ -332,12 +332,26 @@ struct camera
   }
 };
 
-//TODO(Noah): remove openGL calls
+//TODO(Noah): remove this please, just temporary
+struct engine_image
+{
+  unsigned int scale;
+  unsigned int height;
+  unsigned int width;
+  unsigned int *pixelPointer;
+  void *container;
+  void free(platform_free_file FreeFile)
+  {
+    FreeFile(container);
+  }
+};
+
+//TODO(Noah): remove openGL calls, and remove dependency on localTexture
 struct texture
 {
   unsigned int id;
   unsigned int slot;
-  loaded_bitmap localTexture;
+  engine_image localTexture;
   void bind()
   {
     glActiveTexture(GL_TEXTURE0 + slot);

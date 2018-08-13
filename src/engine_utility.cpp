@@ -21,6 +21,7 @@ index_buffer CreateIndexBuffer(unsigned int *data, unsigned int indexCount)
   return buffer;
 }
 
+//TODO(Noah): fix this? or remove it. Why is it an engine engine utility.
 void DrawBitmapUnchecked(loaded_bitmap bitmap, unsigned int *pixelPointer, unsigned int pixelPitch)
 {
   unsigned int *destRow = pixelPointer;
@@ -38,6 +39,7 @@ void DrawBitmapUnchecked(loaded_bitmap bitmap, unsigned int *pixelPointer, unsig
   }
 }
 
+//TODO(Noah): do these belong here?
 unsigned int GetIndexFromCharacter(loaded_font *font, unsigned int character)
 {
   return character - font->firstChar;
@@ -48,4 +50,22 @@ float GetHorizontalAdvanceForPair(loaded_font *font, unsigned char character1, u
   //do stuff here
   float result = font->horizontalAdvance[character1 * font->codePointCount + character2];
   return result;
+}
+
+engine_image BMPToImage(loaded_bitmap bitmap)
+{
+  engine_image image = {};
+  image.scale = 1;
+	image.pixelPointer = bitmap.pixelPointer;
+	image.height = bitmap.height;
+	image.width = bitmap.width;
+	image.container = bitmap.container;
+	return image;
+}
+
+//TODO(Noah): this function is temporary, its also a dumb wrapper
+engine_image LoadBMPImage(platform_read_file *ReadFile, char *path)
+{
+	loaded_bitmap bitmap = LoadBMP(ReadFile, path);
+	return BMPToImage(bitmap);
 }

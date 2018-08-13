@@ -15,15 +15,16 @@ TODO(Noah):
 
 #include <maccis_math.h>
 #include <engine.h>
-#include<engine_utility.cpp> //service to engine and all other services
-#include <renderer.cpp> //service to engine
 
 #include <maccis_file_io.h>
+#include<engine_utility.cpp> //service to engine and all other services
+#include <renderer.cpp> //service to engine
 #include <file_io.cpp> //service to engine
 
 #include <maccis_asset.h>
 #include <asset.cpp> //service to engine
 
+//TODO(Noah): manage what goes in this hook
 #include <engine_hook.cpp> //service that recieves information from the other services
 
 INTERNAL float vertices[] = {
@@ -99,7 +100,7 @@ texture CreateTexture(platform_read_file *ReadFile, platform_free_file *FreeFile
   texture newTexture;
   glGenTextures(1, &newTexture.id);
   glBindTexture(GL_TEXTURE_2D, newTexture.id);
-  newTexture.localTexture = LoadBMP(ReadFile, path);
+  newTexture.localTexture = LoadBMPImage(ReadFile, path);
 
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -173,7 +174,7 @@ INTERNAL texture BuildTextureFromBitmapNoFree(loaded_bitmap bitmap, unsigned int
   texture newTexture = {};
   glGenTextures(1, &newTexture.id);
   glBindTexture(GL_TEXTURE_2D, newTexture.id);
-  newTexture.localTexture = bitmap;
+  newTexture.localTexture = BMPToImage(bitmap);
 
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
