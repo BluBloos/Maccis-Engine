@@ -10,12 +10,12 @@
 //currently the engine uses printf("%s\n", );
 #include <maccis_system.h>
 #include <maccis.h> //global to everything
-#include <maccis_math.h> //everything else prefixed with maccis is optionally global
+//#include <maccis_math.h> //everything else prefixed with maccis is optionally global
 #include <maccis_strings.h>
 #include <maccis_user_input.h>
 #include <platform.h>
-#include <maccis_file_io.h>
-#include <maccis_asset.h>
+//#include <maccis_file_io.h>
+//#include <maccis_asset.h>
 
 #include <engine.cpp> //the engine is a service to the platform
 #include <win32_file_io.cpp>

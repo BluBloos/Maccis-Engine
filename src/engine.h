@@ -1,3 +1,7 @@
+//TODO(Noah): engine.h should be rendering API agnostic
+//NOTE(Noah): I think removing the function calls inside each struct can move us closer to an engine who is
+//rendering api agnostic
+
 INTERNAL void GLClearError()
 {
   while(glGetError() != GL_NO_ERROR);
@@ -20,6 +24,7 @@ INTERNAL bool GLCheckError(char *function, char *file, int line)
 #define GL_CALL(code) code;
 #endif
 
+//TODO(Noah): remove openGL
 struct vertex_buffer
 {
   unsigned int id;
@@ -39,6 +44,7 @@ struct vertex_buffer
   }
 };
 
+//TODO(Noah): remove openGL
 struct buffer_element
 {
   unsigned int componentCount;
@@ -47,6 +53,7 @@ struct buffer_element
   GLenum normalized;
 };
 
+//TODO(Noah): remove openGL
 struct buffer_layout
 {
   buffer_element elements[10];
@@ -78,6 +85,7 @@ struct buffer_layout
   }
 };
 
+//TODO(Noah): remove openGL
 struct index_buffer
 {
   unsigned int id;
@@ -96,6 +104,7 @@ struct index_buffer
   }
 };
 
+//TODO(Noah): remove openGL
 struct vertex_array
 {
   unsigned int id;
@@ -131,6 +140,7 @@ struct vertex_array
   }
 };
 
+//TODO(Noah): remove openGL
 struct shader
 {
   unsigned int id;
@@ -156,6 +166,7 @@ struct shader
   }
 };
 
+//TODO(Noah): abtract the implementation to outside of the struct please
 struct transform
 {
   vec3 position;
@@ -264,6 +275,7 @@ struct transform
   }
 };
 
+//TODO(Noah): abtract the implementation to outside of the struct please
 struct camera
 {
   //mat4 view;
@@ -320,6 +332,7 @@ struct camera
   }
 };
 
+//TODO(Noah): remove openGL calls
 struct texture
 {
   unsigned int id;
@@ -385,6 +398,7 @@ struct game_object
   }
 };
 
+//NOTE(Noah): do these 2D renderables belong in this header?
 struct renderable_2D_vertex
 {
   float position[2];
@@ -392,7 +406,6 @@ struct renderable_2D_vertex
   float normal[3];
 };
 
-//NOTE()
 struct renderable_2D
 {
   vec2 scale;
@@ -423,25 +436,4 @@ struct engine_memory
   platform_get_clock *StartClock;
   platform_get_clock *EndClock;
   platform_get_delta_time *GetClockDeltaTime;
-};
-
-struct engine_state
-{
-  float elapsedTime;
-  char character;
-  //TODO(Noah): need the ability to free allocated memory on memoryArena
-  memory_arena memoryArena;
-  texture defaultTexture;
-  texture fontAtlas;
-  game_object defaultObject;
-  game_object suzanne;
-  camera mainCamera;
-  camera guiCamera;
-  //loaded_bitmap font[100];
-  loaded_asset fontAsset;
-  loaded_asset monkeyAsset;
-  //NOTE(Noah): unless otherwise specified by the game the batch renderer is not initialized
-  //thats why it's a pointer
-  batch_renderer_2D *batchRenderer2D;
-  loaded_font font;
 };

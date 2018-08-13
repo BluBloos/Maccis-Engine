@@ -4,17 +4,27 @@ TODO(Noah):
 -sound
 -all header files should follow the layers architecture as opposed to the rats nest architecture
 -support multiple graphics API
+-remove openGL calls in engine.h
 -implement pseudo-game for the support of different test frameworks
 -implement a main menu for selecting through the various test frameworks!
 -implement fonts aligning with the left edge
 -implement a basic debugger which prints to the top left using our new font system
+-fix that thing where the A gets cut off
+-add transparency to the rendering of text
 */
 
+#include <maccis_math.h>
 #include <engine.h>
-#include<engine_utility.cpp> //service to engine and all services
+#include<engine_utility.cpp> //service to engine and all other services
 #include <renderer.cpp> //service to engine
+
+#include <maccis_file_io.h>
 #include <file_io.cpp> //service to engine
+
+#include <maccis_asset.h>
 #include <asset.cpp> //service to engine
+
+#include <engine_hook.cpp> //service that recieves information from the other services
 
 INTERNAL float vertices[] = {
   -0.5f, -0.5f, 0.0f, 0.0f, //0

@@ -277,7 +277,7 @@ INTERNAL loaded_asset BuildFontAsset(platform_read_file *ReadFile, platform_free
     #if DONT_USE_WINDOWS_FONTS
     characters[i] = BuildCharacterBitmap(fileResult, i, pixelHeight, arena, &descriptors[index], &outFont);
     #else
-    characters[ii] = BuildCharacterBitmap(file2, &context, i, arena, &descriptors[index], outFont.firstChar);
+    characters[i] = BuildCharacterBitmap(file2, &context, i, arena, &descriptors[index], outFont.firstChar);
     #endif
   }
   fclose(file2);
