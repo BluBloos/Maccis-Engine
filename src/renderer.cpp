@@ -19,30 +19,29 @@ void Clear()
 
 void DrawNoIndex(game_object object, camera cam)
 {
-  object.bind();
-  cam.bind(object.material.sh);
+  BindGameObject(&object);
+  BindCamera(&cam, &object.material.sh);
   glDrawArrays(GL_TRIANGLES, 0, object.mesh.vao.vertexBuffer.size / object.mesh.vao.vertexBuffer.elementSize / 8);
   //NOTE(Noah): There are 8 floats to a vertex
 }
 
 void Draw(game_object object, camera cam)
 {
-  object.bind();
-  cam.bind(object.material.sh);
-
-  GL_CALL(glDrawElements(GL_TRIANGLES, object.mesh.indexBuffer.count, GL_UNSIGNED_INT, NULL));
+  BindGameObject(&object);
+  BindCamera(&cam, &object.material.sh);
+  glDrawElements(GL_TRIANGLES, object.mesh.indexBuffer.count, GL_UNSIGNED_INT, NULL);
 }
 
 void DrawBatch(material material, mesh mesh, camera cam, transform *objects, unsigned int count)
 {
-  material.sh.bind();
-  material.updateUniforms();
-  mesh.bind();
-  cam.bind(material.sh);
+  BindShader(&material.sh);
+  UpdateMaterialUniforms(&material);
+  BindMesh(&mesh);
+  BindCamera(&cam, &material.sh);
   for (unsigned int i = 0; i < count; i++)
   {
     transform t = objects[i];
-    material.sh.setUniformMat4f("umodel", t.buildMatrix());
+    SetUniformMat4f(&material.sh, "umodel", BuildMatrixFromTransform(&t, false));
     glDrawElements(GL_TRIANGLES, mesh.indexBuffer.count, GL_UNSIGNED_INT, NULL);
   }
 }
@@ -69,10 +68,10 @@ void InitializeBatchRenderer2D(batch_renderer_2D *batchRenderer2D, shader defaul
 
   //setup the buffer layout desribing the contents of a vertex
   buffer_layout bufferLayout = CreateBufferLayout();
-  bufferLayout.push(2, GL_FLOAT); //position
-  bufferLayout.push(2, GL_FLOAT); //texture coordinates
-  bufferLayout.push(3, GL_FLOAT); //normals
-  batchRenderer2D->vao.addBuffer(vertexBuffer, bufferLayout);
+  PushToBufferLayout(&bufferLayout, 2, MACCIS_FLOAT);
+  PushToBufferLayout(&bufferLayout, 2, MACCIS_FLOAT);
+  PushToBufferLayout(&bufferLayout, 3, MACCIS_FLOAT);
+  AddBufferToVertexArray(&batchRenderer2D->vao, &vertexBuffer, &bufferLayout);
 
   //unbind the buffer
   glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -98,8 +97,8 @@ void InitializeBatchRenderer2D(batch_renderer_2D *batchRenderer2D, shader defaul
 
 void BeginBatchRenderer2D(batch_renderer_2D *batchRenderer2D)
 {
-  batchRenderer2D->vao.bind();
-  batchRenderer2D->vao.vertexBuffer.bind();
+  BindVertexArray(&batchRenderer2D->vao);
+  BindVertexBuffer(&batchRenderer2D->vao.vertexBuffer);
   batchRenderer2D->vertexBufferMap = (renderable_2D_vertex *)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
 }
 
@@ -130,21 +129,21 @@ void EndBatchRenderer2D(batch_renderer_2D *batchRenderer2D)
 
 void Flush(batch_renderer_2D *batchRenderer2D, camera cam)
 {
-  batchRenderer2D->defaultShader.bind();
-  cam.bind(batchRenderer2D->defaultShader);
-  batchRenderer2D->indexBuffer.bind();
-  batchRenderer2D->textureAtlas.bind();
-  batchRenderer2D->defaultShader.setUniform1i("utexture", batchRenderer2D->textureAtlas.slot);
+  BindShader(&batchRenderer2D->defaultShader);
+  BindCamera(&cam, &batchRenderer2D->defaultShader);
+  BindIndexBuffer(&batchRenderer2D->indexBuffer);
+  BindTexture(&batchRenderer2D->textureAtlas);
+  BindTextureToShader(&batchRenderer2D->textureAtlas, &batchRenderer2D->defaultShader);
 
   glDrawElements(GL_TRIANGLES, batchRenderer2D->indexBuffer.count, GL_UNSIGNED_INT, 0);
 
-  batchRenderer2D->vao.unbind();
-  batchRenderer2D->vao.vertexBuffer.unbind();
-  batchRenderer2D->indexBuffer.unbind();
+  UnbindVertexArray();
+  UnbindVertexBuffer();
+  UnbindIndexBuffer();
   batchRenderer2D->indexBuffer.count = 0;
 }
 
-void DebugPushText(char *string, batch_renderer_2D *batchRenderer2D, loaded_font *font)
+inline void DebugPushText(char *string, batch_renderer_2D *batchRenderer2D, loaded_font *font)
 {
   renderable_2D *fontSprites = (renderable_2D *)font->fontSprites;
   unsigned int stringLength = GetStringLength(string);

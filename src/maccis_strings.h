@@ -15,6 +15,24 @@ void CatStrings(int sourceACount, char *sourceA, int sourceBCount,
 	*dest = 0;
 }
 
+void CatStrings(int sourceACount, char *sourceA, int sourceBCount,
+ char *sourceB, char *dest)
+{
+  unsigned int count = 0;
+	for (int index = 0; index < sourceACount; index++)
+	{
+		*dest++ = *sourceA++;
+    count++;
+	}
+	for (int index = 0; index < sourceBCount; index++)
+	{
+		*dest++ = *sourceB++;
+    count++;
+	}
+	*dest = 0;
+}
+
+
 unsigned int GetStringLength(char *string)
 {
 	unsigned int count = 0;
@@ -50,10 +68,10 @@ INTERNAL bool StringEquals(char *StringA, char *StringB)
 	return true;
 }
 
-//TODO(Noah): Remove dependency on MAX_PATH
+//TODO(Noah): Note, cat strings actually doesn't care what destintation length you pass it
 char *MaccisCatStringsUnchecked(char *stringA, char *stringB, char *dest)
 {
-  CatStrings(GetStringLength(stringA), stringA, GetStringLength(stringB), stringB, MAX_PATH, dest);
+  CatStrings(GetStringLength(stringA), stringA, GetStringLength(stringB), stringB, dest);
   return dest;
 }
 

@@ -53,3 +53,8 @@ loaded_bitmap LoadBMP(platform_read_file *ReadFile, char *path)
 	}
 	return bitmap;
 }
+
+inline void FreeBitmap(platform_free_file *FreeFile, loaded_bitmap bitmap)
+{
+	FreeFile(bitmap.pixelPointer);
+}

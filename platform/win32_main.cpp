@@ -3,8 +3,24 @@
 #include <gl.h>
 
 #include <maccis.h> //global to everything
-#include <maccis_user_input.h>
 #include <platform.h>
+#include <maccis_user_input.h>
+#include <maccis_math.h>
+
+#include <backend.h>
+
+//rendering api wrappers which are a service to the engine
+#ifdef GL_BACKEND
+#include <gl_backend.cpp>
+#endif
+
+#ifdef VULKAN_BACKEND
+#include <vulkan_backend.cpp>
+#endif
+
+#ifdef DX12_BACKEND
+#include <d12_backend.cpp>
+#endif
 
 #include <engine.cpp> //the engine is a service to the platform
 
@@ -12,6 +28,16 @@
 #include <maccis_system.h>
 #include <win32_file_io.cpp>
 #include <win32.h>
+
+struct win32_game_code
+{
+  game_init *GameInit;
+  game_update_and_render *GameUpdateAndRender;
+  game_close *GameClose;
+  bool isValid;
+  FILETIME lastWriteTime;
+  HMODULE gameCodeDLL;
+};
 
 #define MAX_CONSOLE_LINES 500
 typedef BOOL WINAPI wgl_swap_interval_ext(int interval);
@@ -315,50 +341,53 @@ inline FILETIME Win32GetLastWriteTime(char *fileName)
 	return lastFileWrite;
 }
 
-FILETIME FileTimeFromU64(unsigned __int64 u64)
+INTERNAL void Win32UnloadGameCode(win32_game_code *gameCode)
 {
-  FILETIME newFileTime = {};
-  newFileTime.dwLowDateTime = (unsigned int)u64;
-  newFileTime.dwHightDateTime = (unsigned int)(u64 >> 32);
-  return newFileTime;
-}
-
-INTERNAL void Win32UnloadGameCode(game_code *gameCode)
-{
-	if (gameCode->GameCodeDLL)
+	if (gameCode->gameCodeDLL)
 	{
-		FreeLibrary(gameCode->GameCodeDLL);
+		FreeLibrary(gameCode->gameCodeDLL);
 	}
 	gameCode->isValid = false;
 	gameCode->GameUpdateAndRender = NULL;
-	gameCode->GameCLose = NULL;
+	gameCode->GameClose = NULL;
   gameCode->GameInit = NULL;
 }
 
-INTERNAL game_code Win32LoadGameCode(char *sourceDLLName, char *tempDLLName)
+INTERNAL win32_game_code Win32LoadGameCode(char *sourceDLLName, char *tempDLLName)
 {
-	game_code result = {};
+	win32_game_code result = {};
 
-	result.LastWriteTime = Win32GetLastWriteTime(sourceDLLName);
+	result.lastWriteTime = Win32GetLastWriteTime(sourceDLLName);
 
 	CopyFile(sourceDLLName, tempDLLName, FALSE);
-	Result.GameCodeDLL = LoadLibraryA(TempDLLName);
+	result.gameCodeDLL = LoadLibraryA(tempDLLName);
 
-	if(Result.GameCodeDLL)
+	if(result.gameCodeDLL)
 	{
-		Result.UpdateRender = (game_update_render *)GetProcAddress(Result.GameCodeDLL,"GameUpdateRender");
-		Result.GetSoundSamples = (game_get_sound_samples *)GetProcAddress(Result.GameCodeDLL,"GameGetSoundSamples");
-
-		Result.IsValid = (Result.UpdateRender && Result.GetSoundSamples);
+		result.GameUpdateAndRender = (game_update_and_render *)GetProcAddress(result.gameCodeDLL,"GameUpdateAndRender");
+		result.GameInit = (game_init *)GetProcAddress(result.gameCodeDLL,"GameInit");
+    result.GameClose = (game_close *)GetProcAddress(result.gameCodeDLL, "GameClose");
+		result.isValid = result.GameUpdateAndRender && result.GameInit && result.GameClose;
 	}
 
-	if (!Result.IsValid)
+	if (!result.isValid)
 	{
-		Result.UpdateRender = 0;
-		Result.GetSoundSamples = 0;
+		result.GameUpdateAndRender = NULL;
+		result.GameClose = NULL;
+    result.GameInit = NULL;
 	}
 
-	return Result;
+	return result;
+}
+
+INTERNAL game_code Win32GameCodeToGameCode(win32_game_code win32GameCode)
+{
+  game_code gameCode = {};
+  gameCode.isValid = win32GameCode.isValid;
+  gameCode.GameUpdateAndRender = win32GameCode.GameUpdateAndRender;
+  gameCode.GameClose = win32GameCode.GameClose;
+  gameCode.GameInit = win32GameCode.GameInit;
+  return gameCode;
 }
 
 int CALLBACK WinMain(HINSTANCE instance,
@@ -405,7 +434,9 @@ int CALLBACK WinMain(HINSTANCE instance,
       RECT rect = {};
       GetWindowRect(windowHandle, &rect);
 
-      game_code GameCode = {};
+      //create the game codes
+      win32_game_code gameCode = {};
+      game_code engineGameCode = {};
 
       engine_memory engineMemory = {};
       engineMemory.storageSize = MB(64);
@@ -422,17 +453,38 @@ int CALLBACK WinMain(HINSTANCE instance,
       engine_state *engineState = (engine_state *)engineMemory.storage;
       engineState->memoryArena.init((char *)engineMemory.storage + sizeof(engine_state), engineMemory.storageSize - sizeof(engine_state));
 
-      Init(gameCode, engineMemory, rect.right - rect.left, rect.bottom - rect.top);
+      //load in the source DLL name
+      char sourceDLLName[MAX_PATH];
+      char tempDLLName[MAX_PATH];
+      char stringBuffer[MAX_PATH];
+      read_file_result fileResult = Win32ReadFile(MaccisCatStringsUnchecked(win32FilePath, "config\\sourceDLL.txt", stringBuffer));
+      if(fileResult.content)
+      {
+        //NOTE(Noah): There is minus 2 here to remove the \r\n characters!
+        CloneString((char *)fileResult.content, sourceDLLName, fileResult.contentSize - 2);
+        MaccisCatStringsUnchecked(sourceDLLName, ".temp", tempDLLName);
+      } else
+      {
+        //TODO(Noah): do some logging since we could not find the maccis directory file!
+      }
+
+      gameCode = Win32LoadGameCode(sourceDLLName, tempDLLName);
+      engineGameCode = Win32GameCodeToGameCode(gameCode);
+
+      Init(engineGameCode, engineMemory, rect.right - rect.left, rect.bottom - rect.top);
 
       int lastMouseX, lastMouseY;
 
       while(globalRunning)
 			{
         FILETIME newDLLWriteTime = Win32GetLastWriteTime(sourceDLLName);
-				if (CompareFileTime(&newDLLWriteTime, &FileTimeFromU64(gameCode.lastWriteTime) ))
+				if (CompareFileTime(&newDLLWriteTime, &gameCode.lastWriteTime))
 				{
 					Win32UnloadGameCode(&gameCode);
-					gameCode = Win32LoadGameCode(sourceDLLName, TempDLLName);
+          //NOTE(Noah): I think we need the temporary DLL name to enable hot reloading. We can't rebuild the DLL if it's already loaded!
+          //We got to clone it!
+          gameCode = Win32LoadGameCode(sourceDLLName, tempDLLName);
+          engineGameCode = Win32GameCodeToGameCode(gameCode);
 				}
 
         lastMouseX = globalUserInput.mouseX;
@@ -443,12 +495,12 @@ int CALLBACK WinMain(HINSTANCE instance,
         globalUserInput.mouseDX = globalUserInput.mouseX - lastMouseX;
         globalUserInput.mouseDY = globalUserInput.mouseY - lastMouseY;
 
-        Update(gameCode, engineMemory, globalUserInput);
+        Update(engineGameCode, engineMemory, globalUserInput);
         SwapBuffers(dc);
         Win32PrepareInput();
       }
 
-      Clean(gameCode, engineMemory);
+      Clean(engineGameCode, engineMemory);
       ReleaseDC(windowHandle, dc);
       VirtualFree(engineMemory.storage, engineMemory.storageSize, MEM_RELEASE);
     }

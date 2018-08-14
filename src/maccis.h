@@ -1,4 +1,8 @@
-//zero dependencies
+
+#ifdef NULL
+#else
+#define NULL 0
+#endif
 
 #define INTERNAL static
 #define PERSISTENT static
@@ -12,6 +16,15 @@
 #else
 #define Assert(Expression)
 #endif
+
+enum enum_type
+{
+  MACCIS_FLOAT,
+  MACCIS_DOUBLE,
+  MACCIS_UINT, MACCIS_INT,
+  MACCIS_SHORT, MACCIS_USHORT,
+  MACCIS_CHAR, MACCIS_UCHAR
+};
 
 struct memory_arena
 {
@@ -35,22 +48,4 @@ struct memory_arena
       return NULL; //we return null when there is no more space!
     }
   }
-};
-
-#define GAME_INIT(name) void name(engine_memory *memory)
-typedef GAME_INIT(game_init);
-
-#define GAME_UPDATE_AND_RENDER(name) void name(engine_memory *memory, user_input *userInput)
-typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
-
-#define GAME_CLOSE(name) void name()
-typedef GAME_CLOSE(game_close);
-
-struct game_code
-{
-  game_init *GameInit;
-  game_update_and_render *GameUpdateAndRender;
-  game_close *GameClose;
-  unsigned __int64 lastWriteTime;
-  bool isValid;
 };

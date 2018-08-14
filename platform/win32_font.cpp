@@ -1,7 +1,10 @@
 #include <windows.h>
 #include <stdio.h>
-#include <maccis.h>
+
 #include <platform.h>
+#include <maccis_user_input.h>
+#include <maccis.h>
+
 #include <win32_file_io.cpp>
 #include <maccis_strings.h>
 #include <maccis_file_io.h>

@@ -12,11 +12,11 @@ TODO(Noah):
 -fix that thing where the A gets cut off
 -add transparency to the rendering of text
 */
-
-#include <maccis_math.h>
 #include <engine.h>
 
 #include <maccis_file_io.h>
+#include <engine_channel.h>
+
 #include <file_io.cpp> //service to engine
 #include <engine_utility.cpp> //service to engine and all other services
 
@@ -89,36 +89,6 @@ INTERNAL shader CreateShader(char *vertexShader, char *fragmentShader)
   return s;
 }
 
-vertex_buffer CreateVertexBuffer(float *data, unsigned int floatCount)
-{
-  vertex_buffer buffer = {}; buffer.elementSize = sizeof(float); buffer.size = buffer.elementSize * floatCount;
-  glGenBuffers(1, &buffer.id);
-  glBindBuffer(GL_ARRAY_BUFFER, buffer.id); //select the buffer
-  glBufferData(GL_ARRAY_BUFFER, buffer.size, data, GL_STATIC_DRAW);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  return buffer;
-}
-
-texture CreateTexture(platform_read_file *ReadFile, platform_free_file *FreeFile, char *path, unsigned int slot)
-{
-  texture newTexture;
-  glGenTextures(1, &newTexture.id);
-  glBindTexture(GL_TEXTURE_2D, newTexture.id);
-  newTexture.localTexture = LoadBMPImage(ReadFile, path);
-
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, newTexture.localTexture.width,
-    newTexture.localTexture.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, newTexture.localTexture.pixelPointer);
-  glBindTexture(GL_TEXTURE_2D, 0);
-  newTexture.localTexture.free(FreeFile);
-  newTexture.slot = slot;
-  return newTexture;
-}
-
 mat4 CreateProjectionMatrix(float fov, float aspectRatio, float n, float f)
 {
   mat4 result = {};
@@ -173,48 +143,6 @@ INTERNAL camera CreateOrthoCamera(float width, float height)
   return cam;
 }
 
-INTERNAL texture BuildTextureFromBitmapNoFree(loaded_bitmap bitmap, unsigned int slot)
-{
-  texture newTexture = {};
-  glGenTextures(1, &newTexture.id);
-  glBindTexture(GL_TEXTURE_2D, newTexture.id);
-  newTexture.localTexture = BMPToImage(bitmap);
-
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, newTexture.localTexture.width,
-    newTexture.localTexture.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, newTexture.localTexture.pixelPointer);
-  glBindTexture(GL_TEXTURE_2D, 0);
-  newTexture.slot = slot;
-  return newTexture;
-}
-
-game_object GameObjectFromRawModel(raw_model model, shader sh)
-{
-  game_object gameObject = {};
-
-  gameObject.mesh.vao = CreateVertexArray(); //make the vao
-  vertex_buffer vertexBuffer = CreateVertexBuffer((float *)model.vertices, model.vertexCount * 8); //make the vertex buffer
-  buffer_layout bufferLayout = CreateBufferLayout(); //make a buffer layout
-
-  bufferLayout.push(3, GL_FLOAT); //describe the buffer layout
-  bufferLayout.push(2, GL_FLOAT);
-  bufferLayout.push(3, GL_FLOAT);
-
-  gameObject.mesh.vao.addBuffer(vertexBuffer, bufferLayout); //describe the vao
-  gameObject.mesh.indexBuffer = CreateIndexBuffer((unsigned int *)model.indices, model.indexCount);
-
-  gameObject.material.sh = sh;
-  gameObject.material.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-  gameObject.transform.setScale(1.0f, 1.0f, 1.0f);
-  gameObject.transform.setPosition(0.0f, 0.0f, -1.0f);
-
-  return gameObject;
-}
-
 INTERNAL renderable_2D CreateSprite(float uniformScale, vec2 pos, float width, float height)
 {
   renderable_2D renderable = {};
@@ -253,27 +181,27 @@ INTERNAL renderable_2D CreateSpriteFromTexture(float uniformScale, vec2 pos,
 
   //setup transform of renderable
   renderable.scale = NewVec2(uniformScale, uniformScale);
-  renderable.width = tex.localTexture.width;
-  renderable.height = tex.localTexture.height;
+  renderable.width = tex.width;
+  renderable.height = tex.height;
 
   //generate vertices of the renderable
-  renderable.vertices[0].position[0] = pos.x - tex.localTexture.width * uniformScale / 2.0f;
-  renderable.vertices[0].position[1] = pos.y - tex.localTexture.height * uniformScale / 2.0f;
+  renderable.vertices[0].position[0] = pos.x - tex.width * uniformScale / 2.0f;
+  renderable.vertices[0].position[1] = pos.y - tex.height * uniformScale / 2.0f;
   renderable.vertices[0].textureCoordinate[0] = 0.0f;
   renderable.vertices[0].textureCoordinate[1] = 0.0f;
 
-  renderable.vertices[1].position[0] = pos.x + tex.localTexture.width * uniformScale / 2.0f;
-  renderable.vertices[1].position[1] = pos.y - tex.localTexture.height * uniformScale / 2.0f;
+  renderable.vertices[1].position[0] = pos.x + tex.width * uniformScale / 2.0f;
+  renderable.vertices[1].position[1] = pos.y - tex.height * uniformScale / 2.0f;
   renderable.vertices[1].textureCoordinate[0] = 1.0f;
   renderable.vertices[1].textureCoordinate[1] = 0.0f;
 
-  renderable.vertices[2].position[0] = pos.x + tex.localTexture.width * uniformScale / 2.0f;
-  renderable.vertices[2].position[1] = pos.y + tex.localTexture.height * uniformScale / 2.0f;
+  renderable.vertices[2].position[0] = pos.x + tex.width * uniformScale / 2.0f;
+  renderable.vertices[2].position[1] = pos.y + tex.height * uniformScale / 2.0f;
   renderable.vertices[2].textureCoordinate[0] = 1.0f;
   renderable.vertices[2].textureCoordinate[1] = 1.0f;
 
-  renderable.vertices[3].position[0] = pos.x - tex.localTexture.width * uniformScale / 2.0f;
-  renderable.vertices[3].position[1] = pos.y + tex.localTexture.height * uniformScale / 2.0f;
+  renderable.vertices[3].position[0] = pos.x - tex.width * uniformScale / 2.0f;
+  renderable.vertices[3].position[1] = pos.y + tex.height * uniformScale / 2.0f;
   renderable.vertices[3].textureCoordinate[0] = 0.0f;
   renderable.vertices[3].textureCoordinate[1] = 1.0f;
 
@@ -340,12 +268,20 @@ void Init(game_code gameCode, engine_memory memory, unsigned int width, unsigned
   engineState->mainCamera = CreateCamera((float)width, (float)height, 90.0f);
 
   //create the default texture
-  engineState->defaultTexture = CreateTexture(memory.ReadFile, memory.FreeFile,
-    MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\checker.bmp", stringBuffer), 0);
+  loaded_bitmap bitmap = LoadBMP(memory.ReadFile, MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\checker.bmp", stringBuffer));
+  engineState->defaultTexture = CreateTexture(bitmap.pixelPointer, bitmap.width, bitmap.height, 0);
+  FreeBitmap(memory.FreeFile, bitmap);
 
-  if(memory.gameCode.isValid)
+  //create the renderer
+  engineState->renderer.Clear = Clear;
+  engineState->renderer.Draw = Draw;
+
+  //create the engine
+  engineState->engine.GameObjectFromRawModel = GameObjectFromRawModel;
+
+  if(gameCode.isValid)
   {
-    memory.gameCode.GameInit(&memory);
+    gameCode.GameInit(&engineState->engine, &memory);
   }
   #if 0
   engine_state *engineState = (engine_state *)memory.storage;
@@ -434,16 +370,16 @@ void Update(game_code gameCode, engine_memory memory, user_input userInput)
     }
   }
   #endif
-  if(memory.gameCode.isValid)
+  if(gameCode.isValid)
   {
-    memory.gameCode.GameUpdateAndRender(&memory, &userInput);
+    gameCode.GameUpdateAndRender(&engineState->engine, &engineState->renderer, &memory, &userInput);
   }
 }
 
 void Clean(game_code gameCode, engine_memory memory)
 {
   engine_state *engineState = (engine_state *)memory.storage;
-  engineState->defaultTexture.del();
+  DeleteTexture(&engineState->defaultTexture);
   //memory.FreeFile(memory.storage);
   //memory.GameCode.GameClose();
 }

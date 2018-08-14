@@ -3,15 +3,17 @@
 #define PY_INT_FROM_LIST(list, index) (unsigned int)PyInt_AsLong(PyList_GetItem(list, index))
 
 #include <windows.h>
-#include <maccis.h>
+
 #include <platform.h>
+#include <maccis_user_input.h>
+#include <maccis.h>
+
 #include <maccis_strings.h>
 #include <maccis_file_io.h>
 #include <maccis_asset.h>
 #include <asset.cpp>
 #include <win32_file_io.cpp>
 #include <win32.h>
-
 
 //NOTE(Noah): I don't like the standard library!
 #include <stdio.h>

@@ -6,12 +6,13 @@
 //TODO(Noah): remove dependency on the platform layer
 
 /* dependencies
-gl.h
-c standard libary
+string.h
 maccis_math.h
 platform.h
+backend.h
 */
 
+#if 0
 INTERNAL void GLClearError()
 {
   while(glGetError() != GL_NO_ERROR);
@@ -34,150 +35,8 @@ INTERNAL bool GLCheckError(char *function, char *file, int line)
 #else
 #define GL_CALL(code) code;
 #endif
+#endif
 
-//TODO(Noah): remove openGL
-struct vertex_buffer
-{
-  unsigned int id;
-  unsigned int size;
-  unsigned int elementSize;
-  void bind()
-  {
-    glBindBuffer(GL_ARRAY_BUFFER, id);
-  }
-  void unbind()
-  {
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-  }
-  void del()
-  {
-    glDeleteBuffers(1, &id);
-  }
-};
-
-//TODO(Noah): remove openGL
-struct buffer_element
-{
-  unsigned int componentCount;
-  unsigned int componentSize;
-  GLenum type;
-  GLenum normalized;
-};
-
-//TODO(Noah): remove openGL
-struct buffer_layout
-{
-  buffer_element elements[10];
-  unsigned int elementCount;
-  unsigned int stride;
-  void push(unsigned int count, GLenum type)
-  {
-    buffer_element element;
-    element.componentCount = count;
-    switch (type)
-    {
-      case GL_FLOAT:
-      {
-        element.type = GL_FLOAT;
-        element.normalized = GL_FALSE;
-        element.componentSize = sizeof(float);
-      } break;
-      default:
-      {
-        element.type = GL_FLOAT;
-        element.normalized = GL_FALSE;
-        element.componentSize = sizeof(float);
-      } break;
-    }
-    if(elementCount < 10) {
-      elements[elementCount++] = element;
-      stride += element.componentCount * element.componentSize;
-    }
-  }
-};
-
-//TODO(Noah): remove openGL
-struct index_buffer
-{
-  unsigned int id;
-  unsigned int count;
-  void bind()
-  {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, id);
-  }
-  void del()
-  {
-    glDeleteBuffers(1, &id);
-  }
-  void unbind()
-  {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-  }
-};
-
-//TODO(Noah): remove openGL
-struct vertex_array
-{
-  unsigned int id;
-  vertex_buffer vertexBuffer;
-  buffer_layout bufferLayout;
-  void bind()
-  {
-    glBindVertexArray(id);
-    for (unsigned int i = 0; i < bufferLayout.elementCount; i++)
-    {
-      glEnableVertexAttribArray(i);
-    }
-  }
-  void unbind()
-  {
-    glBindVertexArray(0);
-  }
-  void addBuffer(vertex_buffer vb, buffer_layout bl)
-  {
-    vertexBuffer = vb; bufferLayout = bl;
-    vb.bind();
-    bind();
-    unsigned int offset = 0;
-    for (unsigned int i = 0; i < bl.elementCount; i++)
-    {
-        buffer_element element = bl.elements[i];
-        glVertexAttribPointer(i, element.componentCount, element.type, element.normalized, bl.stride, (const void *)offset);
-        //glEnableVertexAttribArray(i);
-        offset += element.componentSize * element.componentCount;
-    }
-    vb.unbind();
-    unbind();
-  }
-};
-
-//TODO(Noah): remove openGL
-struct shader
-{
-  unsigned int id;
-  void bind()
-  {
-    glUseProgram(id);
-  }
-  int getUniformLocation(char *name)
-  {
-    return glGetUniformLocation(id, name);
-  }
-  void setUniform4f(char *name, float x, float y, float z, float w)
-  {
-    glUniform4f(getUniformLocation(name), x, y, z, w);
-  }
-  void setUniform1i(char *name, int i)
-  {
-    glUniform1i(getUniformLocation(name), i);
-  }
-  void setUniformMat4f(char *name, mat4 mat)
-  {
-    glUniformMatrix4fv(getUniformLocation(name), 1, GL_FALSE, &mat.matp[0]);
-  }
-};
-
-//TODO(Noah): abtract the implementation to outside of the struct please
 struct transform
 {
   vec3 position;
@@ -189,77 +48,6 @@ struct transform
   vec3 up;
   vec3 forward;
 
-  mat4 buildMatrixOriginRotation()
-  {
-    float array[] = {
-      scl.x,0,0,0,
-      0,scl.y,0,0,
-      0,0,scl.z,0,
-      0,0,0,1
-    };
-
-    mat4 bufferMatrix = {};
-    memcpy(bufferMatrix.matp, array, 16 * sizeof(float));
-
-    bufferMatrix.mat[3][0] = position.x;
-    bufferMatrix.mat[3][1] = position.y;
-    bufferMatrix.mat[3][2] = position.z;
-
-    float array2[] = {
-      cosf(rotation.y * DEGREES_TO_RADIANS), 0, sinf(rotation.y * DEGREES_TO_RADIANS), 0,
-      0, 1, 0, 0,
-      -sinf(rotation.y * DEGREES_TO_RADIANS), 0, cosf(rotation.y * DEGREES_TO_RADIANS), 0,
-      0, 0, 0, 1
-    };
-
-    mat4 rotationMatrixY = {};
-    memcpy(rotationMatrixY.matp, array2, 16 * sizeof(float));
-
-    bufferMatrix = TransformMatrix(bufferMatrix, rotationMatrixY);
-
-    float array3[] = {
-      1, 0, 0, 0,
-      0, cosf(rotation.x * DEGREES_TO_RADIANS), sinf(rotation.x * DEGREES_TO_RADIANS), 0,
-      0, -sinf(rotation.x * DEGREES_TO_RADIANS), cosf(rotation.x * DEGREES_TO_RADIANS), 0,
-      0, 0, 0, 1
-    };
-
-    mat4 rotationMatrixZ = {};
-    memcpy(rotationMatrixZ.matp, array3, 16 * sizeof(float));
-
-    bufferMatrix = TransformMatrix(bufferMatrix, rotationMatrixZ);
-
-    return bufferMatrix;
-  }
-  mat4 buildMatrix()
-  {
-    float array[] = {
-      scl.x,0,0,0,
-      0,scl.y,0,0,
-      0,0,scl.z,0,
-      0,0,0,1
-    };
-
-    mat4 bufferMatrix = {};
-    memcpy(bufferMatrix.matp, array, 16 * sizeof(float));
-
-    float array2[] = {
-      cosf(rotation.y * DEGREES_TO_RADIANS), 0, sinf(rotation.y * DEGREES_TO_RADIANS), 0,
-      0, 1, 0, 0,
-      -sinf(rotation.y * DEGREES_TO_RADIANS), 0, cosf(rotation.y * DEGREES_TO_RADIANS), 0,
-      0, 0, 0, 1
-    };
-
-    mat4 rotationMatrixY = {};
-    memcpy(rotationMatrixY.matp, array2, 16 * sizeof(float));
-
-    bufferMatrix = TransformMatrix(bufferMatrix, rotationMatrixY);
-    bufferMatrix.mat[3][0] = position.x;
-    bufferMatrix.mat[3][1] = position.y;
-    bufferMatrix.mat[3][2] = position.z;
-
-    return bufferMatrix;
-  }
   void translate(float dx, float dy, float dz)
   {
     position.x += dx; position.y += dy; position.z += dz;
@@ -286,18 +74,12 @@ struct transform
   }
 };
 
-//TODO(Noah): abtract the implementation to outside of the struct please
+//TODO(Noah): maybe do some abstraction with this class?
 struct camera
 {
   //mat4 view;
   mat4 proj;
   transform trans;
-
-  void bind(shader sh)
-  {
-    sh.setUniformMat4f("uproj", proj);
-    sh.setUniformMat4f("uview", trans.buildMatrixOriginRotation());
-  }
 
   void translateLocal(float dx, float dy, float dz)
   {
@@ -343,37 +125,7 @@ struct camera
   }
 };
 
-//TODO(Noah): remove this please, just temporary
-struct engine_image
-{
-  unsigned int scale;
-  unsigned int height;
-  unsigned int width;
-  unsigned int *pixelPointer;
-  void *container;
-  void free(platform_free_file FreeFile)
-  {
-    FreeFile(container);
-  }
-};
-
-//TODO(Noah): remove openGL calls, and remove dependency on localTexture
-struct texture
-{
-  unsigned int id;
-  unsigned int slot;
-  engine_image localTexture;
-  void bind()
-  {
-    glActiveTexture(GL_TEXTURE0 + slot);
-    glBindTexture(GL_TEXTURE_2D, id);
-  }
-  void del()
-  {
-    glDeleteTextures(1, &id);
-  }
-};
-
+//TODO(Noah): maybe rip some stuff out, or refactor?
 struct material
 {
   shader sh;
@@ -390,22 +142,12 @@ struct material
   {
     tex = t;
   }
-  void updateUniforms()
-  {
-    sh.setUniform4f("ucolor", color.x, color.y, color.z, color.w);
-    sh.setUniform1i("utexture", tex.slot);
-  }
 };
 
 struct mesh
 {
   vertex_array vao;
   index_buffer indexBuffer;
-  void bind()
-  {
-    vao.bind();
-    indexBuffer.bind();
-  }
 };
 
 struct game_object
@@ -413,15 +155,8 @@ struct game_object
   mesh mesh;
   transform transform;
   material material;
-  void bind()
-  {
-    material.sh.bind();
-    material.tex.bind();
-    material.updateUniforms();
-    material.sh.setUniformMat4f("umodel", transform.buildMatrix());
-    mesh.bind();
-  }
 };
+
 
 //NOTE(Noah): do these 2D renderables belong in this header?
 struct renderable_2D_vertex
@@ -449,18 +184,4 @@ struct batch_renderer_2D
   renderable_2D_vertex *vertexBufferMap;
   shader defaultShader;
   texture textureAtlas;
-};
-
-struct engine_memory
-{
-  void *storage;
-  long int storageSize;
-  char *maccisDirectory;
-  platform_read_file *ReadFile;
-  platform_free_file *FreeFile;
-  platform_get_clock *StartClock;
-  platform_get_clock *EndClock;
-  platform_get_delta_time *GetClockDeltaTime;
-  platform_log *Log;
-  game_code gameCode;
 };
