@@ -1,3 +1,5 @@
+//zero dependencies
+
 #define MAX_KEY_STATES 26
 
 enum enum_key_state

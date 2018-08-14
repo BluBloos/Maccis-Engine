@@ -1,3 +1,9 @@
+//TODO(Noah): remove dependency on platform.h
+
+/* dependencies
+platform.h
+*/
+
 struct loaded_bitmap
 {
   unsigned int scale;

@@ -1,3 +1,14 @@
+//TODO(Noah): remove dependency on the c library, aka memcpy
+
+//dependencies
+/*
+maccis_file_io.h
+maccis_asset.h
+maccis.h
+platform.h
+c library
+*/
+
 //returns the last wrapper in the asset
 asset_wrapper *AdvanceToAssetEnd(loaded_asset *asset)
 {

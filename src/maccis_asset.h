@@ -1,3 +1,7 @@
+/*dependencie
+none
+*/
+
 enum asset_types
 {
   ASSET_BITMAP, ASSET_RAW_MODEL, ASSET_STRUCT_ARRAY, ASSET_FONT

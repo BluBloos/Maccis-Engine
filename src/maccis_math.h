@@ -1,6 +1,10 @@
 //TODO(Noah): remove dependency on math.h for sin and cos
 #include <math.h>
 
+/* dependencies
+c standard library (math.h)
+*/
+
 #define PI 3.1415f
 #define DEGREES_TO_RADIANS PI / 180.0f
 

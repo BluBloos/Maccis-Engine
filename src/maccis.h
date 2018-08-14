@@ -1,3 +1,5 @@
+//zero dependencies
+
 #define INTERNAL static
 #define PERSISTENT static
 
@@ -33,4 +35,22 @@ struct memory_arena
       return NULL; //we return null when there is no more space!
     }
   }
+};
+
+#define GAME_INIT(name) void name(engine_memory *memory)
+typedef GAME_INIT(game_init);
+
+#define GAME_UPDATE_AND_RENDER(name) void name(engine_memory *memory, user_input *userInput)
+typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
+
+#define GAME_CLOSE(name) void name()
+typedef GAME_CLOSE(game_close);
+
+struct game_code
+{
+  game_init *GameInit;
+  game_update_and_render *GameUpdateAndRender;
+  game_close *GameClose;
+  unsigned __int64 lastWriteTime;
+  bool isValid;
 };

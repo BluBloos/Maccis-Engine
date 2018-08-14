@@ -1,3 +1,10 @@
+/* dependency
+gl.h
+engine.h
+maccis_file_io.h
+file_io.cpp
+*/
+
 vertex_array CreateVertexArray()
 {
   vertex_array vertexArray = {};

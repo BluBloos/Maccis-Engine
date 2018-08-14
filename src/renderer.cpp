@@ -1,6 +1,16 @@
 //NOTE(Noah): Currently the renderer depends on openGL. Should the renderer be aware of the API or be API agnostic?
 //I think it's essential that the renderer is API specific, since Vulkan is so dramatically different than openGL.
 
+/*dependencies
+gl.h
+engine.h
+standard c library
+maccis_file_io.h
+maccis_strings.h
+engine_utilities.cpp
+maccis_math.h
+*/
+
 void Clear()
 {
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f);

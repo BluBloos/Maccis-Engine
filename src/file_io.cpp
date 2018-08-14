@@ -1,3 +1,12 @@
+//TODO(Noah): remove dependency on the standar C library
+
+/* dependencies
+platform.h
+maccis_file_io.h
+maccis.h
+c library
+*/
+
 void SaveBitmap(char *fileName, platform_write_file *WriteFile, loaded_bitmap bitmap, memory_arena *arena)
 {
 	bitmap_header header = {};

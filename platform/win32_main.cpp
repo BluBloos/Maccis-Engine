@@ -1,23 +1,15 @@
 #include <Windows.h>
-
-//TODO(Noah): get rid of malloc.h
-#include <malloc.h>
-
 #include <glew.h>
 #include <gl.h>
 
-//TODO(Noah): Remove dependency of maccis_system.h for the engine. Instead the engine must get passed a function to log things
-//currently the engine uses printf("%s\n", );
-#include <maccis_system.h>
 #include <maccis.h> //global to everything
-//#include <maccis_math.h> //everything else prefixed with maccis is optionally global
-#include <maccis_strings.h>
 #include <maccis_user_input.h>
 #include <platform.h>
-//#include <maccis_file_io.h>
-//#include <maccis_asset.h>
 
 #include <engine.cpp> //the engine is a service to the platform
+
+//windows stuff
+#include <maccis_system.h>
 #include <win32_file_io.cpp>
 #include <win32.h>
 
@@ -305,6 +297,70 @@ PLATFORM_GET_DELTA_TIME(Win32GetClockDeltaTime)
   return Win32GetSecondsElapsed(globalTimer.start, globalTimer.end, globalTimer.perfCountFrequency);
 }
 
+PLATFORM_LOG(Win32Log)
+{
+  printf("%s", message);
+}
+
+inline FILETIME Win32GetLastWriteTime(char *fileName)
+{
+	FILETIME lastFileWrite = {};
+	WIN32_FIND_DATA findData;
+	HANDLE findHandle = FindFirstFileA(fileName, &findData);
+	if (findHandle != INVALID_HANDLE_VALUE)
+	{
+		FindClose(findHandle);
+		lastFileWrite = findData.ftLastWriteTime;
+	}
+	return lastFileWrite;
+}
+
+FILETIME FileTimeFromU64(unsigned __int64 u64)
+{
+  FILETIME newFileTime = {};
+  newFileTime.dwLowDateTime = (unsigned int)u64;
+  newFileTime.dwHightDateTime = (unsigned int)(u64 >> 32);
+  return newFileTime;
+}
+
+INTERNAL void Win32UnloadGameCode(game_code *gameCode)
+{
+	if (gameCode->GameCodeDLL)
+	{
+		FreeLibrary(gameCode->GameCodeDLL);
+	}
+	gameCode->isValid = false;
+	gameCode->GameUpdateAndRender = NULL;
+	gameCode->GameCLose = NULL;
+  gameCode->GameInit = NULL;
+}
+
+INTERNAL game_code Win32LoadGameCode(char *sourceDLLName, char *tempDLLName)
+{
+	game_code result = {};
+
+	result.LastWriteTime = Win32GetLastWriteTime(sourceDLLName);
+
+	CopyFile(sourceDLLName, tempDLLName, FALSE);
+	Result.GameCodeDLL = LoadLibraryA(TempDLLName);
+
+	if(Result.GameCodeDLL)
+	{
+		Result.UpdateRender = (game_update_render *)GetProcAddress(Result.GameCodeDLL,"GameUpdateRender");
+		Result.GetSoundSamples = (game_get_sound_samples *)GetProcAddress(Result.GameCodeDLL,"GameGetSoundSamples");
+
+		Result.IsValid = (Result.UpdateRender && Result.GetSoundSamples);
+	}
+
+	if (!Result.IsValid)
+	{
+		Result.UpdateRender = 0;
+		Result.GetSoundSamples = 0;
+	}
+
+	return Result;
+}
+
 int CALLBACK WinMain(HINSTANCE instance,
   HINSTANCE prevInstance,
   LPSTR cmdLine,
@@ -349,6 +405,8 @@ int CALLBACK WinMain(HINSTANCE instance,
       RECT rect = {};
       GetWindowRect(windowHandle, &rect);
 
+      game_code GameCode = {};
+
       engine_memory engineMemory = {};
       engineMemory.storageSize = MB(64);
       engineMemory.storage = VirtualAlloc(0, engineMemory.storageSize, MEM_COMMIT, PAGE_READWRITE);
@@ -359,43 +417,24 @@ int CALLBACK WinMain(HINSTANCE instance,
       engineMemory.StartClock = Win32StartClock;
       engineMemory.EndClock = Win32EndClock;
       engineMemory.GetClockDeltaTime = Win32GetClockDeltaTime;
+      engineMemory.Log = Win32Log;
 
       engine_state *engineState = (engine_state *)engineMemory.storage;
       engineState->memoryArena.init((char *)engineMemory.storage + sizeof(engine_state), engineMemory.storageSize - sizeof(engine_state));
 
-      /*//////////////////////
-      //TEMPORARY BUILDING OF FONT!
-      char fontName[MAX_PATH];
-      read_file_result fileResult = Win32ReadFile(MaccisCatStringsUnchecked(win32FilePath, "config\\font.txt", fontName));
-      if(fileResult.content)
-      {
-        CloneString((char *)fileResult.content, fontName, fileResult.contentSize);
-      } else
-      {
-        //TODO(Noah): logging: we could not find the font configuration file!
-      }
-
-      //Im going to need the file to save to
-      //and im going to need the font name!
-
-      //build the font asset
-      loaded_asset asset = BuildFontAsset(Win32ReadFile, Win32FreeFile, Win32WriteFile,
-        &engineState->memoryArena, fontName, 60.0f);
-
-      //TODO(Noah): don't save to font.asset since that assumes that we are only going to have one font being used during runtime!
-      WriteAsset(Win32WriteFile, &engineState->memoryArena, &asset, MaccisCatStringsUnchecked(win32FilePath, "res\\font.asset", fontName));
-
-      //output debug bitmap so we can see what the bitmap actually looks like to make sure the font is like ok fam!
-      loaded_bitmap *bitmap = (loaded_bitmap *)asset.pWrapper->asset;
-      SaveBitmap(MaccisCatStringsUnchecked(win32FilePath, "res\\fontAtlas.bmp", fontName), Win32WriteFile, *bitmap, &engineState->memoryArena);
-      ////////////////////////////////////*/
-
-      Init(engineMemory, rect.right - rect.left, rect.bottom - rect.top);
+      Init(gameCode, engineMemory, rect.right - rect.left, rect.bottom - rect.top);
 
       int lastMouseX, lastMouseY;
 
       while(globalRunning)
 			{
+        FILETIME newDLLWriteTime = Win32GetLastWriteTime(sourceDLLName);
+				if (CompareFileTime(&newDLLWriteTime, &FileTimeFromU64(gameCode.lastWriteTime) ))
+				{
+					Win32UnloadGameCode(&gameCode);
+					gameCode = Win32LoadGameCode(sourceDLLName, TempDLLName);
+				}
+
         lastMouseX = globalUserInput.mouseX;
         lastMouseY = globalUserInput.mouseY;
 
@@ -404,12 +443,12 @@ int CALLBACK WinMain(HINSTANCE instance,
         globalUserInput.mouseDX = globalUserInput.mouseX - lastMouseX;
         globalUserInput.mouseDY = globalUserInput.mouseY - lastMouseY;
 
-        Update(engineMemory, globalUserInput);
+        Update(gameCode, engineMemory, globalUserInput);
         SwapBuffers(dc);
         Win32PrepareInput();
       }
 
-      Clean(engineMemory);
+      Clean(gameCode, engineMemory);
       ReleaseDC(windowHandle, dc);
       VirtualFree(engineMemory.storage, engineMemory.storageSize, MEM_RELEASE);
     }

@@ -1,3 +1,7 @@
+/*dependencies
+none
+*/
+
 #define PLATFORM_FREE_FILE(name) void name(void *memory)
 typedef PLATFORM_FREE_FILE(platform_free_file);
 
@@ -22,3 +26,6 @@ typedef PLATFORM_GET_CLOCK(platform_get_clock);
 
 #define PLATFORM_GET_DELTA_TIME(name) float name()
 typedef PLATFORM_GET_DELTA_TIME(platform_get_delta_time);
+
+#define PLATFORM_LOG(name) void name(char *message)
+typedef PLATFORM_LOG(platform_log);

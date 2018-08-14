@@ -2,17 +2,28 @@
 //NOTE(Noah): I think removing the function calls inside each struct can move us closer to an engine who is
 //rendering api agnostic
 
+//TODO(Noah): remove dependency on the C standard library
+//TODO(Noah): remove dependency on the platform layer
+
+/* dependencies
+gl.h
+c standard libary
+maccis_math.h
+platform.h
+*/
+
 INTERNAL void GLClearError()
 {
   while(glGetError() != GL_NO_ERROR);
 }
 
+//TODO(Noah): fix this, it doesn't print
 INTERNAL bool GLCheckError(char *function, char *file, int line)
 {
   bool result = true;
   while(GLenum error = glGetError())
   {
-    printf("GL_ERROR: %d\nFUNCTION: %s\nFILE: %s\nLINE: %d", error, function, file, line);
+    //printf("GL_ERROR: %d\nFUNCTION: %s\nFILE: %s\nLINE: %d", error, function, file, line);
     result = false;
   }
   return result;
@@ -450,4 +461,6 @@ struct engine_memory
   platform_get_clock *StartClock;
   platform_get_clock *EndClock;
   platform_get_delta_time *GetClockDeltaTime;
+  platform_log *Log;
+  game_code gameCode;
 };

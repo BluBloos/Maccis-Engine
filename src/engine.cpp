@@ -17,14 +17,15 @@ TODO(Noah):
 #include <engine.h>
 
 #include <maccis_file_io.h>
-#include<engine_utility.cpp> //service to engine and all other services
-#include <renderer.cpp> //service to engine
 #include <file_io.cpp> //service to engine
+#include <engine_utility.cpp> //service to engine and all other services
+
+#include <maccis_strings.h>
+#include <renderer.cpp> //service to engine
 
 #include <maccis_asset.h>
 #include <asset.cpp> //service to engine
 
-//TODO(Noah): manage what goes in this hook
 #include <engine_hook.cpp> //service that recieves information from the other services
 
 INTERNAL float vertices[] = {
@@ -39,6 +40,7 @@ INTERNAL unsigned int indices[] = {
   2, 3, 0
 };
 
+//TODO(Noah): add logging to incorrect compilation of shaders
 INTERNAL unsigned int CompileShader(unsigned int type, char *shader)
 {
   unsigned int id = glCreateShader(type);
@@ -49,6 +51,7 @@ INTERNAL unsigned int CompileShader(unsigned int type, char *shader)
   glGetShaderiv(id, GL_COMPILE_STATUS, &result);
   if(result == GL_FALSE)
   {
+    #if 0
     //TODO(Noah): remove _alloca and add logging functions provided by the platform layer
     int length;
     glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
@@ -56,6 +59,7 @@ INTERNAL unsigned int CompileShader(unsigned int type, char *shader)
     glGetShaderInfoLog(id, length, &length, message);
     printf("Failed to comile shader!\n");
     printf("%s\n", message);
+    #endif
     glDeleteShader(id);
     return 0;
   }
@@ -322,8 +326,28 @@ void LoadFontFromAsset(memory_arena *arena, loaded_asset asset, loaded_font *out
   }
 }
 
-void Init(engine_memory memory, unsigned int width, unsigned int height)
+void Init(game_code gameCode, engine_memory memory, unsigned int width, unsigned int height)
 {
+  engine_state *engineState = (engine_state *)memory.storage;
+  char stringBuffer[260];
+
+  //create the default shader
+  read_file_result f1 = memory.ReadFile(MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\shader.vert", stringBuffer));
+  read_file_result f2 = memory.ReadFile(MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\shader.frag", stringBuffer));
+  engineState->defaultShader = CreateShader((char *)f1.content, (char *)f2.content);
+
+  //create the main camera
+  engineState->mainCamera = CreateCamera((float)width, (float)height, 90.0f);
+
+  //create the default texture
+  engineState->defaultTexture = CreateTexture(memory.ReadFile, memory.FreeFile,
+    MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\checker.bmp", stringBuffer), 0);
+
+  if(memory.gameCode.isValid)
+  {
+    memory.gameCode.GameInit(&memory);
+  }
+  #if 0
   engine_state *engineState = (engine_state *)memory.storage;
   char stringBuffer[260];
 
@@ -379,67 +403,13 @@ void Init(engine_memory memory, unsigned int width, unsigned int height)
   engineState->defaultObject.material.setTexture(engineState->defaultTexture);
   engineState->defaultObject.transform.setScale(1.0f, 1.0f, 1.0f);
   engineState->defaultObject.transform.setPosition(0.0f, 0.0f, -5.0f);
-
-  memory.StartClock();
-
-  engineState->monkeyAsset = LoadAsset(memory.ReadFile, memory.FreeFile,
-    &engineState->memoryArena,
-    MaccisCatStringsUnchecked(memory.maccisDirectory, "res\\monkey2.asset", stringBuffer));
-  raw_model model = *(raw_model *)engineState->monkeyAsset.pWrapper->asset;
-  engineState->suzanne = GameObjectFromRawModel(model, sh2);
-
-  memory.EndClock();
-  float duration = memory.GetClockDeltaTime();
-  printf("obj time: %fms\n", duration * 1000.0f);
-
-  engineState->suzanne.material.setTexture(engineState->defaultTexture);
-  engineState->character = '?';
+  #endif
 }
 
-void Update(engine_memory memory, user_input userInput)
+void Update(game_code gameCode, engine_memory memory, user_input userInput)
 {
-  memory.StartClock();
   engine_state *engineState = (engine_state *)memory.storage;
-
-  //process input
-  float speed = 5 / 60.0f;
-  if (userInput.keyStates[MACCIS_KEY_W].endedDown)
-  {
-    engineState->mainCamera.translateLocal(0.0f, 0.0f, -speed);
-  }
-  if (userInput.keyStates[MACCIS_KEY_A].endedDown)
-  {
-    engineState->mainCamera.translateLocal(-speed, 0.0f, 0.0f);
-  }
-  if (userInput.keyStates[MACCIS_KEY_S].endedDown)
-  {
-    engineState->mainCamera.translateLocal(0.0f, 0.0f, speed);
-  }
-  if (userInput.keyStates[MACCIS_KEY_D].endedDown)
-  {
-    engineState->mainCamera.translateLocal(speed, 0.0f, 0.0f);
-  }
-  if (userInput.keyStates[MACCIS_KEY_SHIFT].endedDown)
-  {
-    engineState->mainCamera.translateLocal(0.0f, -speed, 0.0f);
-  }
-  if (userInput.keyStates[MACCIS_KEY_SPACE].endedDown)
-  {
-    engineState->mainCamera.translateLocal(0.0f, speed, 0.0f);
-  }
-  if (userInput.keyStates[MACCIS_MOUSE_LEFT].endedDown)
-  {
-    engineState->mainCamera.rotate(0.0f, userInput.mouseDX / 5, 0.0f);
-    engineState->mainCamera.rotate(-userInput.mouseDY / 5, 0.0f, 0.0f);
-  }
-
-  //render 3d scene
-  Clear();
-  engineState->defaultObject.transform.rotate(0.0f, -2.0f, 0.0f);
-  Draw(engineState->defaultObject, engineState->mainCamera);
-  engineState->suzanne.transform.rotate(0.0f, 2.0f, 0.0f);
-  Draw(engineState->suzanne, engineState->mainCamera);
-
+  #if 0
   //render gui
   BeginBatchRenderer2D(engineState->batchRenderer2D);
 
@@ -451,7 +421,8 @@ void Update(engine_memory memory, user_input userInput)
 
   memory.EndClock();
   float duration = memory.GetClockDeltaTime();
-  printf("update time: %fms\n", duration * 1000.0f);
+  //TODO(Noah): fix this log here
+  //Log(FloatToString(duration * 1000.0f));
   engineState->elapsedTime += duration;
   if (engineState->elapsedTime > 0.8f)
   {
@@ -462,11 +433,17 @@ void Update(engine_memory memory, user_input userInput)
       engineState->character = '?';
     }
   }
+  #endif
+  if(memory.gameCode.isValid)
+  {
+    memory.gameCode.GameUpdateAndRender(&memory, &userInput);
+  }
 }
 
-void Clean(engine_memory memory)
+void Clean(game_code gameCode, engine_memory memory)
 {
   engine_state *engineState = (engine_state *)memory.storage;
   engineState->defaultTexture.del();
-  memory.FreeFile(memory.storage);
+  //memory.FreeFile(memory.storage);
+  //memory.GameCode.GameClose();
 }
