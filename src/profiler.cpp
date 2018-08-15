@@ -1,5 +1,6 @@
 struct text_handle
 {
+  vec2 
   unsigned int textLength;
   char *text;
   unsigned int fontId;
@@ -17,7 +18,7 @@ INTERNAL text_handle PushText(profiler *profileHandle, char *text)
 {
   //go through all the registered text handle and find space on the screen
 
-  
+
   profileHandle->registeredTexts[profileHandle->registeredTextCount++] = newHandle;
 }
 

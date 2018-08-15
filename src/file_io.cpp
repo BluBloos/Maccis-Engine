@@ -18,7 +18,7 @@ void SaveBitmap(char *fileName, platform_write_file *WriteFile, loaded_bitmap bi
 	header.Height = bitmap.height; /* Image height in pixels */
 	header.Planes = 1; /* Number of color planes, must be set to 1 */
 	header.BitsPerPixel = 32; /* Number of bits per pixel */
-  header.biCompression = BI_RGB; //specfies type of compression to be used
+  header.biCompression = 0; //specfies type of compression to be used
 
 	void *data = arena->push(sizeof(bitmap_header) + bitmap.width * bitmap.height * sizeof(unsigned int));
 	char *scan = (char *)data;

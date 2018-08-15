@@ -143,12 +143,12 @@ void Flush(batch_renderer_2D *batchRenderer2D, camera cam)
   batchRenderer2D->indexBuffer.count = 0;
 }
 
-inline void DebugPushText(char *string, batch_renderer_2D *batchRenderer2D, loaded_font *font)
+inline void DebugPushText(char *string, batch_renderer_2D *batchRenderer2D, loaded_font *font, vec2 position)
 {
   renderable_2D *fontSprites = (renderable_2D *)font->fontSprites;
   unsigned int stringLength = GetStringLength(string);
-  float xOffset = 100.0f;
-  float baseline = 100.0f;
+  float xOffset = position.x;
+  float baseline = position.y;
   char *scan = string;
   char prevCharacter = *scan;
   for (unsigned int i = 0; i < stringLength; i++)

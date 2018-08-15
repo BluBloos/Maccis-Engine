@@ -22,3 +22,46 @@ inline void Submit(batch_renderer_2D *batchRenderer2D, renderable_2D renderable)
   batchRenderer2D->vertexBufferMap += 4;
   batchRenderer2D->indexBuffer.count += 6;
 }
+
+//TODO(Noah): do these belong here?
+unsigned int GetIndexFromCharacter(loaded_font *font, unsigned int character)
+{
+  return character - font->firstChar;
+}
+
+float GetHorizontalAdvanceForPair(loaded_font *font, unsigned char character1, unsigned char character2)
+{
+  //do stuff here
+  float result = font->horizontalAdvance[character1 * font->codePointCount + character2];
+  return result;
+}
+
+inline void DebugPushText(char *string, batch_renderer_2D *batchRenderer2D, loaded_font *font, vec2 position)
+{
+  renderable_2D *fontSprites = (renderable_2D *)font->fontSprites;
+  unsigned int stringLength = GetStringLength(string);
+  float xOffset = position.x;
+  float baseline = position.y;
+  char *scan = string;
+  char prevCharacter = *scan;
+  for (unsigned int i = 0; i < stringLength; i++)
+  {
+    char character = *scan;
+
+    if (prevCharacter != 0)
+    {
+      xOffset += GetHorizontalAdvanceForPair(font, prevCharacter, character);
+    }
+
+    renderable_2D sprite = fontSprites[character];
+    sprite.position = NewVec2(xOffset + sprite.width * sprite.alignPercentage[0], baseline - sprite.height * sprite.alignPercentage[1]);
+    Submit(batchRenderer2D, sprite);
+      //xOffset += sprite.width + 1.0f;
+
+    prevCharacter = *scan;
+    scan++;
+  }
+
+  //special case space
+  //do proper verical alignment to the baseline via getting the text metrics
+}

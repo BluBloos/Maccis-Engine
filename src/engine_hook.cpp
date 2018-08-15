@@ -26,6 +26,9 @@ struct engine_state
   loaded_asset monkeyAsset;
   //NOTE(Noah): unless otherwise specified by the game the batch renderer is not initialized
   //thats why it's a pointer
-  //batch_renderer_2D *batchRenderer2D;
-  //loaded_font font;
+  batch_renderer_2D *batchRenderer2D;
+
+  //TODO(Noah): implement a list system to rid ourselves of the pain below!
+  texture textures[10]; //NOTE(Noah): we only support ten textures
+  unsigned int textureCount;
 };

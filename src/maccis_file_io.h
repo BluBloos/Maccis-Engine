@@ -70,4 +70,5 @@ struct loaded_font
   void *fontSprites;
   float lineHeight;
   float *horizontalAdvance;
+  unsigned int atlasID;
 };

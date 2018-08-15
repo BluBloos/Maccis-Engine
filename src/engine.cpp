@@ -26,6 +26,8 @@ TODO(Noah):
 #include <maccis_asset.h>
 #include <asset.cpp> //service to engine
 
+#include <game.h>
+
 #include <engine_hook.cpp> //service that recieves information from the other services
 
 INTERNAL float vertices[] = {
@@ -39,55 +41,6 @@ INTERNAL unsigned int indices[] = {
   0, 1, 2,
   2, 3, 0
 };
-
-//TODO(Noah): add logging to incorrect compilation of shaders
-INTERNAL unsigned int CompileShader(unsigned int type, char *shader)
-{
-  unsigned int id = glCreateShader(type);
-  glShaderSource(id, 1, &shader, NULL);
-  glCompileShader(id);
-
-  int result;
-  glGetShaderiv(id, GL_COMPILE_STATUS, &result);
-  if(result == GL_FALSE)
-  {
-    #if 0
-    //TODO(Noah): remove _alloca and add logging functions provided by the platform layer
-    int length;
-    glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
-    char *message = (char *)_alloca(length * sizeof(char));
-    glGetShaderInfoLog(id, length, &length, message);
-    printf("Failed to comile shader!\n");
-    printf("%s\n", message);
-    #endif
-    glDeleteShader(id);
-    return 0;
-  }
-
-  return id;
-}
-
-INTERNAL shader CreateShader(char *vertexShader, char *fragmentShader)
-{
-  shader s;
-  unsigned int program = glCreateProgram();
-  unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexShader);
-  unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShader);
-
-  glAttachShader(program, vs);
-  glAttachShader(program, fs);
-
-  //TODO(Noah): Assert if the shader compilation fails
-
-  glLinkProgram(program);
-  glValidateProgram(program);
-
-  glDeleteShader(vs);
-  glDeleteShader(fs);
-
-  s.id = program;
-  return s;
-}
 
 mat4 CreateProjectionMatrix(float fov, float aspectRatio, float n, float f)
 {
@@ -106,21 +59,6 @@ mat4 CreateProjectionMatrix(float fov, float aspectRatio, float n, float f)
   return result;
 }
 
-INTERNAL mat4 CreateOrthographicMatrix(float width, float height, float n, float f)
-{
-  mat4 result = {};
-  float r = width; float l = 0;
-  float t = height; float b = 0;
-  float identity[] = {
-    2 / (r - l), 0, 0, 0,
-    0, 2 / (t -b),  0, 0,
-    0, 0, -2 / (f - n),0,
-    -(r+l)/(r-l), -(t+b)/(t-b), -(f+n)/(f-n),1
-  };
-  memcpy(result.matp, identity, sizeof(float) * 16);
-  return result;
-}
-
 INTERNAL camera CreateCamera(float width, float height, float fov)
 {
   camera cam = {};
@@ -130,128 +68,6 @@ INTERNAL camera CreateCamera(float width, float height, float fov)
   cam.trans.up = NewVec3(0.0f, 1.0f, 0.0f);
   cam.trans.right = NewVec3(1.0f, 0.0f, 0.0f);
   return cam;
-}
-
-INTERNAL camera CreateOrthoCamera(float width, float height)
-{
-  camera cam = {};
-  cam.proj = CreateOrthographicMatrix(width, height, 1.0f, 100.0f);
-  cam.trans.setScale(1.0f, 1.0f , 1.0f);
-  cam.trans.forward = NewVec3(0.0f, 0.0f, 1.0f);
-  cam.trans.up = NewVec3(0.0f, 1.0f, 0.0f);
-  cam.trans.right = NewVec3(1.0f, 0.0f, 0.0f);
-  return cam;
-}
-
-INTERNAL renderable_2D CreateSprite(float uniformScale, vec2 pos, float width, float height)
-{
-  renderable_2D renderable = {};
-
-  //setup transform of renderable
-  renderable.scale = NewVec2(uniformScale, uniformScale);
-
-  //generate vertices of the renderable
-  renderable.vertices[0].position[0] = pos.x;
-  renderable.vertices[0].position[1] = pos.y;
-  renderable.vertices[0].textureCoordinate[0] = 0.0f;
-  renderable.vertices[0].textureCoordinate[1] = 0.0f;
-
-  renderable.vertices[1].position[0] = pos.x + width * uniformScale;
-  renderable.vertices[1].position[1] = pos.y;
-  renderable.vertices[1].textureCoordinate[0] = 1.0f;
-  renderable.vertices[1].textureCoordinate[1] = 0.0f;
-
-  renderable.vertices[2].position[0] = pos.x + width * uniformScale;
-  renderable.vertices[2].position[1] = pos.y + height * uniformScale;
-  renderable.vertices[2].textureCoordinate[0] = 1.0f;
-  renderable.vertices[2].textureCoordinate[1] = 1.0f;
-
-  renderable.vertices[3].position[0] = pos.x;
-  renderable.vertices[3].position[1] = pos.y + height * uniformScale;
-  renderable.vertices[3].textureCoordinate[0] = 0.0f;
-  renderable.vertices[3].textureCoordinate[1] = 1.0f;
-
-  return renderable;
-}
-
-INTERNAL renderable_2D CreateSpriteFromTexture(float uniformScale, vec2 pos,
-  texture tex)
-{
-  renderable_2D renderable = {};
-
-  //setup transform of renderable
-  renderable.scale = NewVec2(uniformScale, uniformScale);
-  renderable.width = tex.width;
-  renderable.height = tex.height;
-
-  //generate vertices of the renderable
-  renderable.vertices[0].position[0] = pos.x - tex.width * uniformScale / 2.0f;
-  renderable.vertices[0].position[1] = pos.y - tex.height * uniformScale / 2.0f;
-  renderable.vertices[0].textureCoordinate[0] = 0.0f;
-  renderable.vertices[0].textureCoordinate[1] = 0.0f;
-
-  renderable.vertices[1].position[0] = pos.x + tex.width * uniformScale / 2.0f;
-  renderable.vertices[1].position[1] = pos.y - tex.height * uniformScale / 2.0f;
-  renderable.vertices[1].textureCoordinate[0] = 1.0f;
-  renderable.vertices[1].textureCoordinate[1] = 0.0f;
-
-  renderable.vertices[2].position[0] = pos.x + tex.width * uniformScale / 2.0f;
-  renderable.vertices[2].position[1] = pos.y + tex.height * uniformScale / 2.0f;
-  renderable.vertices[2].textureCoordinate[0] = 1.0f;
-  renderable.vertices[2].textureCoordinate[1] = 1.0f;
-
-  renderable.vertices[3].position[0] = pos.x - tex.width * uniformScale / 2.0f;
-  renderable.vertices[3].position[1] = pos.y + tex.height * uniformScale / 2.0f;
-  renderable.vertices[3].textureCoordinate[0] = 0.0f;
-  renderable.vertices[3].textureCoordinate[1] = 1.0f;
-
-  return renderable;
-}
-
-void LoadFontFromAsset(memory_arena *arena, loaded_asset asset, loaded_font *outFont)
-{
-  asset_wrapper wrappers[4];
-  ParseAsset(&asset, wrappers);
-
-  loaded_font *sourceFont = (loaded_font *)wrappers[2].asset;
-  *outFont = *sourceFont;
-  outFont->horizontalAdvance = (float  *)wrappers[3].asset;
-
-  /*///////////
-  FILE *file = fopen("C:\\dev\\log.txt","w+");
-  for (unsigned int i = 0; i < outFont->codePointCount; i++)
-  {
-    for (unsigned int j = 0; j < outFont->codePointCount; j++)
-    {
-      float f = outFont->horizontalAdvance[i * outFont->codePointCount + j];
-      fprintf(file, "letter 1: %d, letter 2: %d, f: %f\n",i + outFont->firstChar, j + outFont->firstChar, f);
-    }
-  }
-  fclose(file);
-  ////////////////*/
-
-  outFont->fontSprites = arena->push(outFont->codePointCount * sizeof(renderable_2D));
-  renderable_2D *fontSprites = (renderable_2D *)outFont->fontSprites;
-
-  character_desriptor *descriptors = (character_desriptor *)wrappers[1].asset;
-  unsigned int descriptorCount = wrappers[1].assetSize / sizeof(character_desriptor);
-  for (unsigned int i = 0; i < descriptorCount; i++)
-  {
-    character_desriptor descriptor = descriptors[i];
-    fontSprites[i] = CreateSprite(1.0f, NewVec2(0.0f, 0.0f), descriptor.width, descriptor.height);
-    fontSprites[i].width = descriptor.width;
-    fontSprites[i].height = descriptor.height;
-    fontSprites[i].alignPercentage[0] = descriptor.alignPercentage[0];
-    fontSprites[i].alignPercentage[1] = descriptor.alignPercentage[1];
-    fontSprites[i].vertices[0].textureCoordinate[0] = descriptor.textureCoordinate[0];
-    fontSprites[i].vertices[0].textureCoordinate[1] = descriptor.textureCoordinate[1];
-    fontSprites[i].vertices[1].textureCoordinate[0] = descriptor.textureCoordinate[2];
-    fontSprites[i].vertices[1].textureCoordinate[1] = descriptor.textureCoordinate[3];
-    fontSprites[i].vertices[2].textureCoordinate[0] = descriptor.textureCoordinate[4];
-    fontSprites[i].vertices[2].textureCoordinate[1] = descriptor.textureCoordinate[5];
-    fontSprites[i].vertices[3].textureCoordinate[0] = descriptor.textureCoordinate[6];
-    fontSprites[i].vertices[3].textureCoordinate[1] = descriptor.textureCoordinate[7];
-  }
 }
 
 void Init(game_code gameCode, engine_memory memory, unsigned int width, unsigned int height)
@@ -275,13 +91,19 @@ void Init(game_code gameCode, engine_memory memory, unsigned int width, unsigned
   //create the renderer
   engineState->renderer.Clear = Clear;
   engineState->renderer.Draw = Draw;
+  engineState->renderer.InitializeBatchRenderer2D = InitializeBatchRenderer2D;
+  engineState->renderer.BeginBatchRenderer2D = BeginBatchRenderer2D;
+  engineState->renderer.EndBatchRenderer2D = EndBatchRenderer2D;
+  engineState->renderer.Flush = Flush;
 
   //create the engine
   engineState->engine.GameObjectFromRawModel = GameObjectFromRawModel;
+  engineState->engine.CreateTexture = CreateTexture;
+  engineState->engine.CreateShader = CreateShader;
 
   if(gameCode.isValid)
   {
-    gameCode.GameInit(&engineState->engine, &memory);
+    gameCode.GameInit(&engineState->engine, &engineState->renderer, &memory, width, height);
   }
   #if 0
   engine_state *engineState = (engine_state *)memory.storage;

@@ -25,21 +25,45 @@ typedef CLEAR(renderer_clear);
 #define DRAW(name) void name(game_object object, camera cam)
 typedef DRAW(renderer_draw);
 
+#define INITIALIZE_BATCH_RENDERER_2D(name) void name(batch_renderer_2D *batchRenderer2D, shader defaultShader)
+typedef INITIALIZE_BATCH_RENDERER_2D(renderer_initialize_batch_renderer_2D);
+
+#define BEGIN_BATCH_RENDERER_2D(name) void name(batch_renderer_2D *batchRenderer2D)
+typedef BEGIN_BATCH_RENDERER_2D(renderer_begin_batch_renderer_2D);
+
+#define END_BATCH_RENDERER_2D(name) void name(batch_renderer_2D *batchRenderer2D)
+typedef END_BATCH_RENDERER_2D(renderer_end_batch_renderer_2D);
+
+#define FLUSH(name) void name(batch_renderer_2D *batchRenderer2D, camera cam)
+typedef FLUSH(renderer_flush);
+
 struct renderer
 {
   renderer_clear *Clear;
   renderer_draw *Draw;
+  renderer_initialize_batch_renderer_2D *InitializeBatchRenderer2D;
+  renderer_begin_batch_renderer_2D *BeginBatchRenderer2D;
+  renderer_end_batch_renderer_2D *EndBatchRenderer2D;
+  renderer_flush *Flush;
 };
 
 #define GAME_OBJECT_FROM_RAW_MODEL(name) game_object name(raw_model model, shader shader, texture texture)
-typedef GAME_OBJECT_FROM_RAW_MODEL(engine_game_object_from_raw_model);
+typedef GAME_OBJECT_FROM_RAW_MODEL(game_object_from_raw_model);
+
+#define CREATE_TEXTURE(name) texture name(unsigned int *pixelPointer, unsigned int width, unsigned int height, unsigned int slot)
+typedef CREATE_TEXTURE(create_texture);
+
+#define CREATE_SHADER(name) shader name(char *vertexShader, char *fragmentShader);
+typedef CREATE_SHADER(create_shader);
 
 struct engine
 {
-  engine_game_object_from_raw_model *GameObjectFromRawModel;
+  game_object_from_raw_model *GameObjectFromRawModel;
+  create_texture *CreateTexture;
+  create_shader *CreateShader;
 };
 
-#define GAME_INIT(name) void name(engine *engine, engine_memory *memory)
+#define GAME_INIT(name) void name(engine *engine, renderer *renderer, engine_memory *memory, unsigned int width, unsigned int height)
 typedef GAME_INIT(game_init);
 
 #define GAME_UPDATE_AND_RENDER(name) void name(engine *engine, renderer *renderer, engine_memory *memory, user_input *userInput)

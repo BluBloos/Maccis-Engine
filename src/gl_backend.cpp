@@ -178,3 +178,52 @@ vertex_buffer CreateVertexBuffer(float *data, unsigned int floatCount)
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   return buffer;
 }
+
+//TODO(Noah): add logging to incorrect compilation of shaders
+inline INTERNAL unsigned int CompileShader(unsigned int type, char *shader)
+{
+  unsigned int id = glCreateShader(type);
+  glShaderSource(id, 1, &shader, NULL);
+  glCompileShader(id);
+
+  int result;
+  glGetShaderiv(id, GL_COMPILE_STATUS, &result);
+  if(result == GL_FALSE)
+  {
+    #if 0
+    //TODO(Noah): remove _alloca and add logging functions provided by the platform layer
+    int length;
+    glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
+    char *message = (char *)_alloca(length * sizeof(char));
+    glGetShaderInfoLog(id, length, &length, message);
+    printf("Failed to comile shader!\n");
+    printf("%s\n", message);
+    #endif
+    glDeleteShader(id);
+    return 0;
+  }
+
+  return id;
+}
+
+inline INTERNAL shader CreateShader(char *vertexShader, char *fragmentShader)
+{
+  shader s;
+  unsigned int program = glCreateProgram();
+  unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexShader);
+  unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShader);
+
+  glAttachShader(program, vs);
+  glAttachShader(program, fs);
+
+  //TODO(Noah): Assert if the shader compilation fails
+
+  glLinkProgram(program);
+  glValidateProgram(program);
+
+  glDeleteShader(vs);
+  glDeleteShader(fs);
+
+  s.id = program;
+  return s;
+}
