@@ -1,14 +1,19 @@
 #include <game_include.h>
 
+//NOTE(Noah): im going to use this to generate random numbers
+#include <stdlib.h>
+
 struct player
 {
   unsigned int score;
+  vec2 velocity;
   renderable_2D sprite;
 };
 
 struct ball
 {
   vec2 velocity;
+  float radius;
   renderable_2D sprite;
 };
 
@@ -41,6 +46,40 @@ INTERNAL loaded_asset fontAsset = {};
 //NOTE(Noah): These need to be initialized
 INTERNAL float playerMaxY = 0;
 INTERNAL float playerMinY = 0;
+
+#define playerMaxVelocity 200
+
+INTERNAL bool CircleLineCollisionTest(vec2 circlePos, float circleRadius, vec2 linePos1, vec2 linePos2, vec *posOut)
+{
+  //calucalte line 1
+  float gradient = (linePos2.y - linePos1.y) / (linePos2.x - linePos1.x);
+  float beta = linePos2.y - gradient * linePos2.x;
+
+  //calculate line 2
+  float pGradient = -1.0f / gradient;
+  float beta2 = circlePos.y - pGradient * circlePos.x;
+
+  float x = (beta + beta2) / (gradient - pGradient);
+  float y = gradient * x + beta;
+
+  //calculate the length of the line
+  float lineLength = GetLineLength(NewVec2(x,y), circlePos);
+
+  //get result
+  if (lineLength >= circleRadius)
+  {
+    if (x > linePos1.x && x < linePos2.x)
+    {
+      if (y > linePos1.y && y < linePos2.y)
+      {
+        *posOut = NewVec2(x, y);
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
 
 INTERNAL text_handle PushText(text_engine *textEngine, memory_arena *arena, unsigned int characterAmount, float x, float y, unsigned int fontId)
 {
@@ -75,10 +114,22 @@ INTERNAL unsigned int PushTexture(engine_state *engineState, texture tex)
   return index;
 }
 
+#define RESOLUTION 100000
+INTERNAL float RandomInRange(float a, float f)
+{
+  unsigned int result = rand() % (RESOLUTION + 1);
+  float randomNumber = (f - a) * (float)result / (float)RESOLUTION + a;
+  return randomNumber;
+}
+
 extern "C" GAME_INIT(GameInit)
 {
   engine_state *engineState = (engine_state *)memory->storage;
   char stringBuffer[256]; //NOTE(Noah): I would like something better than this
+
+  //initialize the random number generator
+  float duration = memory->GetClockDeltaTime() * 1000.0f * 1000.0f; //NOTE(Noah): this is in micro seconds
+   srand((unsigned int)duration);
 
   //NOTE(Noah): we still compile fonts to be "font.asset"
 
@@ -98,7 +149,7 @@ extern "C" GAME_INIT(GameInit)
 
   //setup the scoreboard at the top of the screen
   scoreBoard = PushText(&textEngine, &engineState->memoryArena, 100, (float)width / 2.0f, (float)height - (float)font.lineHeight, 0);
-  CloneString("SCORE: ", scoreBoard.text, 7);
+  CloneString("Hearty men sit on garbage!?", scoreBoard.text, 100);
 
   //setup the gui camera
   guiCamera = CreateOrthoCamera((float)width, (float)height);
@@ -120,24 +171,31 @@ extern "C" GAME_INIT(GameInit)
   FreeBitmap(memory->FreeFile, playerBitmap);
 
   players[0].sprite = SpriteFromBitmap(playerBitmap);
-  players[0].sprite.position.x = playerBitmap.width / 2.0f + float(width) * 0.1f;
+  players[0].sprite.position.x = playerBitmap.width / 2.0f;
   players[0].sprite.position.y = (float)height / 2.0f;
-  players[0].sprite.alignPercentage[1] = 0.5;
+  players[0].sprite.alignPercentage[1] = 0.5f;
+  players[0].sprite.alignPercentage[0] = -0.5f;
 
   players[1].sprite = SpriteFromBitmap(playerBitmap);
-  players[1].sprite.position.x = (float)width - playerBitmap.width / 2.0f - float(width) * 0.1f;
+  players[1].sprite.position.x = (float)width - playerBitmap.width / 2.0f;
   players[1].sprite.position.y = (float)height / 2.0f;
+  players[1].sprite.alignPercentage[1] = 0.5f;
+  players[1].sprite.alignPercentage[0] = -0.5f;
 
   loaded_bitmap ballBitmap = LoadBMP(memory->ReadFile, MaccisCatStringsUnchecked(memory->maccisDirectory, "res\\ball.bmp", stringBuffer));
   ballTexture = engine->CreateTexture(ballBitmap.pixelPointer, ballBitmap.width, ballBitmap.height, 2);
   FreeBitmap(memory->FreeFile, ballBitmap);
 
   ball.sprite = SpriteFromBitmap(ballBitmap);
-  //ball.velocity.x = RandomInRange(1.0f, 5.0f);
-  //ball.velocity.y = RandomInRange(1.0f, 5.0f);
+  ball.velocity.x = RandomInRange(50.0f, (float)playerMaxVelocity);
+  ball.velocity.y = RandomInRange(50.0f, (float)playerMaxVelocity);
   ball.sprite.position.x = (float)width / 2.0f;
   ball.sprite.position.y = (float)height / 2.0f;
-
+  ball.sprite.alignPercentage[0] = -0.5f;
+  ball.sprite.alignPercentage[1] = 0.5f;
+  //NOTE(Noah): the ball diameter is equal to the width of the bitmap, because that's how I made the bitmap,
+  //there is zero padding.
+  ball.radius = (float)ballBitmap.width / 2.0f;
 
   //intialize the player max Y and min Y
   playerMaxY = (float)height - (float)playerBitmap.height / 2.0f;
@@ -150,44 +208,78 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
   //player 1
   //NOTE(Noah): this assumes that the framerate is 60 frames per second
-  float playerSpeed = 140 / 60.0f;
+  float framesPerSecond = 60.0f;
+  float secondsPerFrame = 1.0f / framesPerSecond;
+  float playerAcceleration = 20; //5 units per second
+
   if (userInput->keyStates[MACCIS_KEY_W].endedDown)
   {
-    players[0].sprite.position.y += playerSpeed;
-    if (players[0].sprite.position.y > playerMaxY)
+    players[0].velocity.y += playerAcceleration * secondsPerFrame;
+    if (players[0].velocity.y > playerMaxVelocity)
     {
-      players[0].sprite.position.y = playerMaxY;
+      players[0].velocity.y = playerMaxVelocity;
     }
   }
   else if (userInput->keyStates[MACCIS_KEY_S].endedDown)
   {
-    players[0].sprite.position.y -= playerSpeed;
-    if (players[0].sprite.position.y < playerMinY)
+    players[0].velocity.y -= playerAcceleration * secondsPerFrame;
+    if (players[0].velocity.y < -playerMaxVelocity)
     {
-      players[0].sprite.position.y = playerMinY;
+      players[0].velocity.y = -playerMaxVelocity;
     }
   }
 
   //player 2
   if (userInput->keyStates[MACCIS_KEY_UP].endedDown)
   {
-    players[1].sprite.position.y += playerSpeed;
-    if (players[1].sprite.position.y > playerMaxY)
+    players[1].velocity.y += playerAcceleration * secondsPerFrame;
+    if (players[1].velocity.y > playerMaxVelocity)
     {
-      players[1].sprite.position.y = playerMaxY;
+      players[1].velocity.y = playerMaxVelocity;
     }
   }
   else if (userInput->keyStates[MACCIS_KEY_DOWN].endedDown)
   {
-    players[1].sprite.position.y -= playerSpeed;
-    if (players[1].sprite.position.y < playerMinY)
+    players[1].velocity.y -= playerAcceleration * secondsPerFrame;
+    if (players[1].velocity.y < -playerMaxVelocity)
     {
-      players[1].sprite.position.y = playerMinY;
+      players[1].velocity.y = -playerMaxVelocity;
     }
+  }
+
+  #define ABSORPTION 0.2
+  //update the players position based on their velcoity and of course make sure they never go out of bounds
+  //player 1
+  players[0].sprite.position.y += players[0].velocity.y * secondsPerFrame;
+  if (players[0].sprite.position.y > playerMaxY)
+  {
+    //NOTE(Noah): the player collided with the wall, bounce them off of it!
+    players[0].sprite.position.y = playerMaxY;
+    players[0].velocity.y = -players[0].velocity.y * (1 - ABSORPTION);
+  } else if (players[0].sprite.position.y < playerMinY)
+  {
+    players[0].sprite.position.y = playerMinY;
+    players[0].velocity.y = -players[0].velocity.y * (1 - ABSORPTION);
+  }
+
+  //player 2
+  players[1].sprite.position.y += players[1].velocity.y * secondsPerFrame;
+  if (players[1].sprite.position.y > playerMaxY)
+  {
+    //NOTE(Noah): the player collided with the wall, bounce them off of it!
+    players[1].sprite.position.y = playerMaxY;
+    players[1].velocity.y = -players[1].velocity.y * (1 - ABSORPTION);
+  } else if (players[1].sprite.position.y < playerMinY)
+  {
+    players[1].sprite.position.y = playerMinY;
+    players[1].velocity.y = -players[1].velocity.y * (1 - ABSORPTION);
   }
 
   //do physics with the ball, for example determining whether or not it hit one of the paddles and then calculating the
   //appropriate new velocity
+  ball.sprite.position.x += ball.velocity.x * secondsPerFrame;
+  ball.sprite.position.y += ball.velocity.y * secondsPerFrame;
+
   //also if the ball hit a wall give some score to one of the players, and restart the ball back to center
 
   //render the paddles text and the ball

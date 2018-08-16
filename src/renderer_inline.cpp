@@ -5,6 +5,9 @@ string.h
 
 inline void Submit(batch_renderer_2D *batchRenderer2D, renderable_2D renderable)
 {
+  renderable.position = NewVec2(renderable.position.x + renderable.width * renderable.alignPercentage[0],
+    renderable.position.y - renderable.height * renderable.alignPercentage[1]);
+
   renderable.vertices[0].position[0] += renderable.position.x;
   renderable.vertices[0].position[1] += renderable.position.y;
 
@@ -54,7 +57,8 @@ inline void DebugPushText(char *string, batch_renderer_2D *batchRenderer2D, load
     }
 
     renderable_2D sprite = fontSprites[character];
-    sprite.position = NewVec2(xOffset + sprite.width * sprite.alignPercentage[0], baseline - sprite.height * sprite.alignPercentage[1]);
+    //sprite.position = NewVec2(xOffset + sprite.width * sprite.alignPercentage[0], baseline - sprite.height * sprite.alignPercentage[1]);
+    sprite.position = NewVec2(xOffset, baseline);
     Submit(batchRenderer2D, sprite);
       //xOffset += sprite.width + 1.0f;
 

@@ -271,29 +271,18 @@ INTERNAL loaded_asset BuildFontAsset(platform_read_file *ReadFile, platform_free
 
   loaded_bitmap *characters = (loaded_bitmap *)arena->push(sizeof(loaded_bitmap) * outFont.codePointCount);
   character_desriptor *descriptors = (character_desriptor *)arena->push(sizeof(character_desriptor) * outFont.codePointCount);
-  unsigned int index = 0;
 
   FILE *file2 = fopen("C:\\dev\\widths.txt","w+");
   for (unsigned int i = outFont.firstChar; i < outFont.lastChar + 1; i++)
   {
     //TODO(Implement freeing on the memory_arena so that we can destroy the unused bitmaps!)
     #if DONT_USE_WINDOWS_FONTS
-    characters[i] = BuildCharacterBitmap(fileResult, i, pixelHeight, arena, &descriptors[index], &outFont);
+    characters[i] = BuildCharacterBitmap(fileResult, i, pixelHeight, arena, &descriptors[i], &outFont);
     #else
-    characters[i] = BuildCharacterBitmap(file2, &context, i, arena, &descriptors[index], outFont.firstChar);
+    characters[i] = BuildCharacterBitmap(file2, &context, i, arena, &descriptors[i], outFont.firstChar);
     #endif
   }
   fclose(file2);
-  /*
-  //DEBUG save all the bitmaps to a file
-  for (unsigned int i = 0; i < 127 -33; i++)
-  {
-    char stringBuffer[MAX_PATH];
-    char stringBuffer2[MAX_PATH];
-    wsprintf(stringBuffer, "res\\%d.bmp", i);
-    SaveBitmap(MaccisCatStringsUnchecked("C:\\dev\\Maccis-Engine\\", stringBuffer, stringBuffer2), WriteFile, characters[i], arena);
-  }
-  */
 
   //do a pseudo run
   unsigned int pixelPitch = 1080;

@@ -395,6 +395,7 @@ int CALLBACK WinMain(HINSTANCE instance,
   LPSTR cmdLine,
   int showCode)
 {
+  Win32StartClock();
   //initialize the console
   Win32OpenConsole();
   printf("Maccis-Engine version %d!\n", 1);

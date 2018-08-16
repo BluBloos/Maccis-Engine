@@ -101,6 +101,7 @@ void Init(game_code gameCode, engine_memory memory, unsigned int width, unsigned
   engineState->engine.CreateTexture = CreateTexture;
   engineState->engine.CreateShader = CreateShader;
 
+  memory.EndClock();
   if(gameCode.isValid)
   {
     gameCode.GameInit(&engineState->engine, &engineState->renderer, &memory, width, height);

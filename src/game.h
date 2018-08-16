@@ -40,6 +40,8 @@ INTERNAL renderable_2D CreateSprite(float uniformScale, vec2 pos, float width, f
 
   //setup transform of renderable
   renderable.scale = NewVec2(uniformScale, uniformScale);
+  renderable.width = width;
+  renderable.height = height;
 
   //generate vertices of the renderable
   renderable.vertices[0].position[0] = pos.x;
