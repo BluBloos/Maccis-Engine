@@ -39,14 +39,35 @@ float GetHorizontalAdvanceForPair(loaded_font *font, unsigned char character1, u
   return result;
 }
 
-inline void DebugPushText(char *string, batch_renderer_2D *batchRenderer2D, loaded_font *font, vec2 position)
+inline void DebugPushText(char *string, batch_renderer_2D *batchRenderer2D, loaded_font *font, vec2 position, unsigned int textAlignment)
 {
   renderable_2D *fontSprites = (renderable_2D *)font->fontSprites;
   unsigned int stringLength = GetStringLength(string);
+
   float xOffset = position.x;
   float baseline = position.y;
+
+  if (textAlignment == TEXT_CENTER)
+  {
+    unsigned int length = 0;
+    char *scan = string;
+    char prevCharacter = 0;
+    for (unsigned int i = 0; i < stringLength; i++)
+    {
+      char character = *scan;
+
+      if (prevCharacter != 0)
+      {
+        length += GetHorizontalAdvanceForPair(font, prevCharacter, character);
+      }
+      prevCharacter = *scan;
+      scan++;
+    }
+    xOffset -= (float)length / 2.0f;
+  }
+
   char *scan = string;
-  char prevCharacter = *scan;
+  char prevCharacter = 0;
   for (unsigned int i = 0; i < stringLength; i++)
   {
     char character = *scan;

@@ -252,3 +252,12 @@ inline bool CircleLineCollisionTest(vec2 circlePos, float circleRadius, vec2 lin
   }
   return false;
 }
+
+inline float Absolute(float a)
+{
+  if(a < 0.0f)
+  {
+    return -a;
+  }
+  return a;
+}

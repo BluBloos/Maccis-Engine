@@ -26,6 +26,11 @@ enum enum_type
   MACCIS_CHAR, MACCIS_UCHAR
 };
 
+enum enum_text_alignment
+{
+  TEXT_LEFT, TEXT_CENTER
+};
+
 struct memory_arena
 {
   char *memory;

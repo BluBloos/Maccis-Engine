@@ -93,10 +93,31 @@ inline void CloneString(char *String, char *Dest, int DestLength)
 	*Dest = 0;
 }
 
-/*
-char *BuildFilePath(file_path fpath, char *fileName, char *buffer, int bufferLength)
+//currently this functions does not support negative numbers,
+//it only supports whole integers
+inline char *UnsignedIntToString(unsigned int Number, char *Dest)
 {
-	CatStrings(fpath.length, fpath.path, GetStringLength(fileName), fileName, bufferLength, buffer);
-  return buffer;
+	char Buffer[256];
+	char *Temp = Buffer;
+	char *DestRoot = Dest;
+	if (Number)
+	{
+		while (Number)
+		{
+			*Temp++ = Number % 10 + '0';
+			Number = Number / 10;
+		}
+		*Temp-- = 0;
+		int Length = GetStringLength(Buffer);
+		for (int x = 0; x < Length; x++)
+		{
+			*Dest++ = *Temp--;
+		}
+	}
+	else
+	{
+		*Dest++ = '0';
+	}
+	*Dest = 0;
+	return DestRoot;
 }
-*/
