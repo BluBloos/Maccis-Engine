@@ -1,3 +1,8 @@
+#ifdef bool
+#else
+#define bool unsigned int
+#endif
+
 #include <platform.h>
 #include <maccis_user_input.h>
 #include <maccis_math.h>

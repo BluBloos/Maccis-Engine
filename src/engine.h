@@ -161,7 +161,10 @@ struct game_object
 //NOTE(Noah): do these 2D renderables belong in this header?
 struct renderable_2D_vertex
 {
-  float position[2];
+  union {
+    float position[2];
+    vec2 vPosition;
+  };
   float textureCoordinate[2];
   float normal[3];
 };

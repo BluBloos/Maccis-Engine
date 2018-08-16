@@ -47,39 +47,12 @@ INTERNAL loaded_asset fontAsset = {};
 INTERNAL float playerMaxY = 0;
 INTERNAL float playerMinY = 0;
 
+INTERNAL vec2 topLeft = {};
+INTERNAL vec2 topRight= {};
+INTERNAL vec2 bottomLeft = {};
+INTERNAL vec2 bottomRight = {};
+
 #define playerMaxVelocity 200
-
-INTERNAL bool CircleLineCollisionTest(vec2 circlePos, float circleRadius, vec2 linePos1, vec2 linePos2, vec *posOut)
-{
-  //calucalte line 1
-  float gradient = (linePos2.y - linePos1.y) / (linePos2.x - linePos1.x);
-  float beta = linePos2.y - gradient * linePos2.x;
-
-  //calculate line 2
-  float pGradient = -1.0f / gradient;
-  float beta2 = circlePos.y - pGradient * circlePos.x;
-
-  float x = (beta + beta2) / (gradient - pGradient);
-  float y = gradient * x + beta;
-
-  //calculate the length of the line
-  float lineLength = GetLineLength(NewVec2(x,y), circlePos);
-
-  //get result
-  if (lineLength >= circleRadius)
-  {
-    if (x > linePos1.x && x < linePos2.x)
-    {
-      if (y > linePos1.y && y < linePos2.y)
-      {
-        *posOut = NewVec2(x, y);
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
 
 INTERNAL text_handle PushText(text_engine *textEngine, memory_arena *arena, unsigned int characterAmount, float x, float y, unsigned int fontId)
 {
@@ -122,6 +95,29 @@ INTERNAL float RandomInRange(float a, float f)
   return randomNumber;
 }
 
+INTERNAL void ExtractSpriteVertices(renderable_2D renderable, renderable_2D_vertex *vertices)
+{
+  renderable.position = NewVec2(renderable.position.x + renderable.width * renderable.alignPercentage[0],
+    renderable.position.y - renderable.height * renderable.alignPercentage[1]);
+
+  renderable.vertices[0].position[0] += renderable.position.x;
+  renderable.vertices[0].position[1] += renderable.position.y;
+
+  renderable.vertices[1].position[0] += renderable.position.x;
+  renderable.vertices[1].position[1] += renderable.position.y;
+
+  renderable.vertices[2].position[0] += renderable.position.x;
+  renderable.vertices[2].position[1] += renderable.position.y;
+
+  renderable.vertices[3].position[0] += renderable.position.x;
+  renderable.vertices[3].position[1] += renderable.position.y;
+
+  for (unsigned int i = 0; i < 4; i++)
+  {
+    vertices[i] = renderable.vertices[i];
+  }
+}
+
 extern "C" GAME_INIT(GameInit)
 {
   engine_state *engineState = (engine_state *)memory->storage;
@@ -149,7 +145,7 @@ extern "C" GAME_INIT(GameInit)
 
   //setup the scoreboard at the top of the screen
   scoreBoard = PushText(&textEngine, &engineState->memoryArena, 100, (float)width / 2.0f, (float)height - (float)font.lineHeight, 0);
-  CloneString("Hearty men sit on garbage!?", scoreBoard.text, 100);
+  CloneString("EXTREME PONG!!", scoreBoard.text, 100);
 
   //setup the gui camera
   guiCamera = CreateOrthoCamera((float)width, (float)height);
@@ -164,6 +160,12 @@ extern "C" GAME_INIT(GameInit)
   //initialize the 2D batch renderer
   engineState->batchRenderer2D = (batch_renderer_2D *)engineState->memoryArena.push(sizeof(batch_renderer_2D)); //grab some memory
   renderer->InitializeBatchRenderer2D(engineState->batchRenderer2D, shader);
+
+  //initialize walls
+  topLeft = NewVec2(0.0f, (float)height);
+  topRight = NewVec2((float)width, (float)height);
+  bottomLeft = NewVec2(0.0f, 0.0f);
+  bottomRight = NewVec2((float)width, 0);
 
   //initialize the players and the ball
   loaded_bitmap playerBitmap = LoadBMP(memory->ReadFile, MaccisCatStringsUnchecked(memory->maccisDirectory, "res\\player.bmp", stringBuffer));
@@ -275,12 +277,51 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     players[1].velocity.y = -players[1].velocity.y * (1 - ABSORPTION);
   }
 
-  //do physics with the ball, for example determining whether or not it hit one of the paddles and then calculating the
-  //appropriate new velocity
+  //move the ball
   ball.sprite.position.x += ball.velocity.x * secondsPerFrame;
   ball.sprite.position.y += ball.velocity.y * secondsPerFrame;
 
-  //also if the ball hit a wall give some score to one of the players, and restart the ball back to center
+  //do collision check with the ball
+  vec2 collisionPoints[2] = {};
+
+  //test agaisnt top wall
+  if (CircleLineCollisionTest(ball.sprite.position, ball.radius, topLeft, topRight, collisionPoints))
+  {
+    ball.velocity.y = -ball.velocity.y;
+  }
+
+  //test agaisnt bottom wall
+  if (CircleLineCollisionTest(ball.sprite.position, ball.radius, bottomLeft, bottomRight, collisionPoints))
+  {
+    ball.velocity.y = -ball.velocity.y;
+  }
+
+  //test agaisnt left wall
+  if (CircleLineCollisionTest(ball.sprite.position, ball.radius, bottomLeft, topLeft, collisionPoints))
+  {
+    ball.velocity.x = -ball.velocity.x;
+  }
+
+  //test agaisnt right wall
+  if (CircleLineCollisionTest(ball.sprite.position, ball.radius, bottomRight, topRight, collisionPoints))
+  {
+    ball.velocity.x = -ball.velocity.x;
+  }
+
+  //collide agaisnt player 1
+  renderable_2D_vertex vertices[4] = {};
+  ExtractSpriteVertices(players[0].sprite, vertices);
+  if (CircleLineCollisionTest(ball.sprite.position, ball.radius, vertices[1].vPosition, vertices[2].vPosition, collisionPoints))
+  {
+    ball.velocity.x = -ball.velocity.x;
+  }
+
+  //collide agaisnt player 2
+  ExtractSpriteVertices(players[1].sprite, vertices);
+  if (CircleLineCollisionTest(ball.sprite.position, ball.radius, vertices[0].vPosition, vertices[3].vPosition, collisionPoints))
+  {
+    ball.velocity.x = -ball.velocity.x;
+  }
 
   //render the paddles text and the ball
   renderer->Clear();

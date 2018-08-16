@@ -112,3 +112,143 @@ inline mat4 TransformMatrix(mat4 a, mat4 b)
   c.matv[3] = TransformVec4(a.matv[3], b);
   return c;
 }
+
+inline bool PointInBounds(vec2 point, vec2 pos1, vec2 pos2)
+{
+  float minX = Min(pos1.x, pos2.x);
+  float maxX = Max(pos1.x, pos2.x);
+  float minY = Min(pos1.y, pos2.y);
+  float maxY = Max(pos1.y, pos2.y);
+
+  if (point.x >= minX && point.x <= maxX)
+  {
+    if (point.y >= minY && point.y <= maxY)
+    {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+inline float Pow(float b, float e)
+{
+  return powf(b, e);
+}
+
+inline float SquareRoot(float a)
+{
+  return Pow(a, 1.0f / 2.0f);
+}
+
+inline bool CircleLineCollisionTest(vec2 circlePos, float circleRadius, vec2 linePos1, vec2 linePos2, vec2 *posOut)
+{
+  //determine if the line is vertical
+  if (linePos1.x == linePos2.x)
+  {
+    float beta = linePos1.x;
+
+    //calculate the amount of points of intersection
+    float a = 1.0f;
+    float b = -2.0f * circlePos.y;
+    float c = (beta * beta) - 2.0f * beta * circlePos.x + (circlePos.x * circlePos.x) + (circlePos.y * circlePos.y) - (circleRadius * circleRadius);
+
+    float discriminant = (b * b) - (4.0f * a * c);
+    if (discriminant > 0.0f)
+    {
+      //NOTE(Noah): there are two solutions
+      float y1 = (-b + SquareRoot(discriminant)) / (2.0f * a);
+      float x1 = beta;
+
+      float y2 = (-b - SquareRoot(discriminant)) / (2.0f * a);
+      float x2 = beta;
+
+      bool x1bounds = PointInBounds(NewVec2(x1, y1), linePos1, linePos2);
+      bool x2bounds = PointInBounds(NewVec2(x2, y2), linePos1, linePos2);
+
+      if (x1bounds && x2bounds)
+      {
+        //NOTE(Noah): both are in bounds
+        posOut[0] = NewVec2(x1, y1);
+        posOut[1] = NewVec2(x2, y2);
+        return true;
+      } else if(x1bounds)
+      {
+        //NOTE(Noah): only point1 is in bounds
+        posOut[0] = NewVec2(x1, y1);
+        return true;
+      } else if (x2bounds)
+      {
+        //NOTE(Noah): only point2 is in bounds
+        posOut[0] = NewVec2(x2, y2);
+        return true;
+      }
+    } else if (discriminant == 0.0f)
+    {
+      //NOTE(Noah): there is one solution
+      float y = -b / (2.0f * a);
+      float x = beta;
+
+      if (PointInBounds(NewVec2(x, y), linePos1, linePos2))
+      {
+        posOut[0] = NewVec2(x, y);
+        return true;
+      }
+    }
+  } else
+  {
+    //calucalte line 1
+    float gradient = (linePos2.y - linePos1.y) / (linePos2.x - linePos1.x);
+    float beta = linePos2.y - gradient * linePos2.x;
+
+    //calculate the amount of points of intersection
+    float B = beta - circlePos.y;
+    float a = 1.0f + gradient;
+    float b = -2.0f * circlePos.x + 2.0f * gradient * B;
+    float c = (B * B) + (circlePos.x * circlePos.x) - (circleRadius * circleRadius);
+
+    float discriminant = (b * b) - (4.0f * a * c);
+    if (discriminant > 0.0f)
+    {
+      //NOTE(Noah): there are two solutions
+      float x1 = (-b + SquareRoot(discriminant)) / (2.0f * a);
+      float y1 = gradient * x1 + beta;
+
+      float x2 = (-b - SquareRoot(discriminant)) / (2.0f * a);
+      float y2 = gradient * x2 + beta;
+
+      bool x1bounds = PointInBounds(NewVec2(x1, y1), linePos1, linePos2);
+      bool x2bounds = PointInBounds(NewVec2(x2, y2), linePos1, linePos2);
+
+      if (x1bounds && x2bounds)
+      {
+        //NOTE(Noah): both are in bounds
+        posOut[0] = NewVec2(x1, y1);
+        posOut[1] = NewVec2(x2, y2);
+        return true;
+      } else if(x1bounds)
+      {
+        //NOTE(Noah): only point1 is in bounds
+        posOut[0] = NewVec2(x1, y1);
+        return true;
+      } else if (x2bounds)
+      {
+        //NOTE(Noah): only point2 is in bounds
+        posOut[0] = NewVec2(x2, y2);
+        return true;
+      }
+    } else if (discriminant == 0.0f)
+    {
+      //NOTE(Noah): there is one solution
+      float x = -b / (2.0f * a);
+      float y = gradient * x + beta;
+
+      if (PointInBounds(NewVec2(x, y), linePos1, linePos2))
+      {
+        posOut[0] = NewVec2(x, y);
+        return true;
+      }
+    }
+  }
+  return false;
+}
