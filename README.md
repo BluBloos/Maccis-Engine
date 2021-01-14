@@ -13,7 +13,7 @@ This project uses the visual studio compiler, so you will need to install <a hre
 After installing visual studio, clone this project and run the following commands. This will set up the visual studio compiler for use on the command line via the "cl" command. The *build.bat* script takes care of compiling the platform layer, the engine layer, and the game.dll
 ```
 $ shell.bat
-$ build.bat pong.cpp GL_BACKEND
+$ build.bat pong GL_BACKEND
 ```
 Finally, to run the game, run the following commands,  
 ```
@@ -28,5 +28,5 @@ $ build.bat <game_source> <backend>
 ```
 The game source is a single .cpp file with the source code for the game, and the backend is the graphics API. GL_BACKEND is the only supported API. So, to build the other example, run the following command,
 ```
-$ build.bat spinning_monkey.cpp GL_BACKEND 
+$ build.bat spinning_monkey GL_BACKEND 
 ```
