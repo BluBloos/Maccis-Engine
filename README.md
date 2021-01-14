@@ -30,3 +30,8 @@ The game source is a single .cpp file with the source code for the game, and the
 ```
 $ build.bat spinning_monkey GL_BACKEND 
 ```
+To run the game, it is the same sequence of commands as with the pong example
+```
+$ cd  bin/Windows/x86
+$ maccis.exe
+```
