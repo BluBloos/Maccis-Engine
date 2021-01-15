@@ -1,1 +1,1 @@
-C:\dev\Maccis-Engine\bin\Windows\x86\pong.dll
+C:\dev\pong-gl\bin\Windows\x86\spinning_monkey.dll

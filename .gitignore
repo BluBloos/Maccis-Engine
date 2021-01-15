@@ -8,3 +8,4 @@ bin/Windows/x86/*.exp
 bin/Windows/x86/*.lib
 bin/Windows/x86/*.obj
 bin/Windows/x86/*.obj
+bin/Windows/x86/*.sln
