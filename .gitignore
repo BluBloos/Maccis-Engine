@@ -1,0 +1,10 @@
+.vs/*
+bin/Windows/x86/.vs/*
+bin/Windows/x86/*.exe
+bin/Windows/x86/*.pdb
+bin/Windows/x86/*.dll
+bin/Windows/x86/*.temp
+bin/Windows/x86/*.exp
+bin/Windows/x86/*.lib
+bin/Windows/x86/*.obj
+bin/Windows/x86/*.obj
