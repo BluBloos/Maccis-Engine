@@ -5,7 +5,14 @@ Attempted game engine, but ultimately an overengineered version of pong. The pro
 As the project description implies, on the surface this may seem like a video game, but the source code was written with the intention of making generic games. In fact, there is another "game" written using the "engine". See the build steps below for instructions on compiling and running this demo. 
 
 The engine has the following features:
-- BORIS 
+- FILE IO
+- Timing
+- 3D Model loading and rendering
+- 2D Batch Rendering
+- True type font support
+- Orthographic and Projection Cameras
+- Customer Shaders
+- Texture support
 
 ## Build Steps
 This project uses the visual studio compiler, so you will need to install <a href="https://visualstudio.microsoft.com/vs/">Visual Studio</a> if you haven't already. At the time of writing, the latest version is 2019, so I cannot guarentee proper building for any subsequent versions. Also note that if your visual studio version is different than 2019, you will need to change *shell.bat* accordingly.   
