@@ -35,3 +35,10 @@ To run the game, it is the same sequence of commands as with the pong example
 $ cd  bin/Windows/x86
 $ maccis.exe
 ```
+
+## Controls
+### Pong
+For pong, the left paddle moves with the W and S keys, and the right paddle with the up and down arrow keys. 
+### Spinning Monkey
+For the spinning monkey, control the camera with WASD. Use space and shift for moving the camera up and down, respectively. Click and drag the mouse to change where the camera is looking.
+
