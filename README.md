@@ -1,17 +1,19 @@
+<img src="https://i.gyazo.com/427ac0168a87c73c9768de86f94d5d0b.gif" />
+
 # PongGL 🏓
-Attempted game engine, but ultimately an overengineered version of pong. The project was written in C/C++, with minimal to no library usage, and it uses the OpenGL graphics API.
+Overengineered version of pong. OpenGL graphics API was used. C/C++. Minimal to no library usage. 
 
 ## Features
-As the project description implies, on the surface this may seem like a video game, but the source code was written with the intention of making generic games. In fact, there is another "game" written using the "engine". See the build steps below for instructions on compiling and running this demo. 
+While the demo is pong, the source code was written with the intention of making generic games. See the [build steps](#Build-Steps) below for instructions on compiling and running another demo. 
 
-The engine has the following features:
+The "engine" has the following features:
 - FILE IO
 - Timing
 - 3D Model loading and rendering
 - 2D Batch Rendering
 - True type font support
 - Orthographic and Projection Cameras
-- Customer Shaders
+- Custom Shaders
 - Texture support
 
 ## Build Steps
@@ -47,5 +49,5 @@ $ maccis.exe
 ### Pong
 For pong, the left paddle moves with the W and S keys, and the right paddle with the up and down arrow keys. 
 ### Spinning Monkey
-For the spinning monkey, control the camera with WASD. Use space and shift for moving the camera up and down, respectively. Click and drag the mouse to change where the camera is looking.
+For the spinning monkey demo, control the camera with WASD. Use space and shift for moving the camera up and down, respectively. Click and drag the mouse to change where the camera is looking.
 
