@@ -1,12 +1,12 @@
 <img src="https://i.gyazo.com/427ac0168a87c73c9768de86f94d5d0b.gif" />
 
-# PongGL 🏓
-Overengineered version of pong. OpenGL graphics API was used. C/C++. Minimal to no library usage. 
+# Maccis Game Engine 🥜
+See the [build steps](#Build-Steps) below for instructions on compiling and running the demos. 
 
 ## Features
-While the demo is pong, the source code was written with the intention of making generic games. See the [build steps](#Build-Steps) below for instructions on compiling and running another demo. 
+Includes an overengineered and debatable version of pong 🏓. OpenGL graphics API was used. C/C++. Minimal to no library usage. 
 
-The "engine" has the following features:
+The engine has the following features:
 - FILE IO
 - Timing
 - 3D Model loading and rendering
