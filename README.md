@@ -49,13 +49,14 @@ For the spinning monkey demo, control the camera with WASD. Use space and shift 
 # Features
 
 The engine has the following features:
-- FILE IO
+- File IO
 - Timing
-- 3D Model loading and rendering
-- 2D Batch Rendering
+- 3D model loading and rendering
+- Custom assets
+- 2D batch rendering
 - True type font support
-- Orthographic and Projection Cameras
-- Custom Shaders
+- Orthographic and projection cameras
+- Custom shaders
 - Texture support
 
 

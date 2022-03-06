@@ -1,1 +1,0 @@
-C:\dev\pong-gl\bin\Windows\x86\spinning_monkey.dll
