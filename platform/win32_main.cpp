@@ -455,10 +455,11 @@ int CALLBACK WinMain(HINSTANCE instance,
       engineState->memoryArena.init((char *)engineMemory.storage + sizeof(engine_state), engineMemory.storageSize - sizeof(engine_state));
 
       //load in the source DLL name
+      const char *configFileName = "config\\sourceDLL.txt";
       char sourceDLLName[MAX_PATH];
       char tempDLLName[MAX_PATH];
       char stringBuffer[MAX_PATH];
-      read_file_result fileResult = Win32ReadFile(MaccisCatStringsUnchecked(win32FilePath, "config\\sourceDLL.txt", stringBuffer));
+      read_file_result fileResult = Win32ReadFile(MaccisCatStringsUnchecked(win32FilePath, (char *)configFileName, stringBuffer));
       if(fileResult.content)
       {
         //NOTE(Noah): There is minus 2 here to remove the \r\n characters!
@@ -466,7 +467,7 @@ int CALLBACK WinMain(HINSTANCE instance,
         MaccisCatStringsUnchecked(sourceDLLName, ".temp", tempDLLName);
       } else
       {
-        //TODO(Noah): do some logging since we could not find the maccis directory file!
+        printf("%s", "ERROR: Unable to open %s", configFileName);
       }
 
       gameCode = Win32LoadGameCode(sourceDLLName, tempDLLName);

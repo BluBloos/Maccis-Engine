@@ -5,7 +5,7 @@
 A small game-engine written in C and OpenGL, with minimal-to-no library usage. The project includes two demos: pong, and a spinning monkey head.
 
 # Steps for Building
-This project uses the visual studio compiler, so you will need to install <a href="https://visualstudio.microsoft.com/vs/">Visual Studio</a> if you haven't already. At the time of writing, the latest version is 2019, so I cannot guarentee proper building for any subsequent versions. Also note that if your visual studio version is different than 2019, you will need to change *shell.bat* accordingly.   
+This project uses the visual studio compiler, so you will need to install <a href="https://visualstudio.microsoft.com/vs/">Visual Studio</a> if you haven't already. At the time of writing, the latest version is 2022, so I cannot guarentee proper building for any subsequent versions. Also note that if your visual studio version is different than 2022, you will need to change *shell.bat* accordingly.   
 
 After installing visual studio, clone this project and run the following commands. This will set up the visual studio compiler for use on the command line via the "cl" command. The *build.bat* script takes care of compiling the platform layer, the engine layer, and the game.dll
 
