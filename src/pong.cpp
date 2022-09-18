@@ -2,6 +2,7 @@
 
 //NOTE(Noah): im going to use this to generate random numbers
 #include <stdlib.h>
+#include <stdio.h>
 
 struct player
 {
@@ -62,20 +63,23 @@ INTERNAL vec2 bottomRight = {};
 INTERNAL float screenHeight = 0;
 INTERNAL float screenWidth = 0;
 
+#define ROOT_2_OVER_2 0.70710678f
+#define PI 3.14159265359f
+#define DEG_TO_RAD (PI / 180.0f)
 #define SPEED_MULTIPLIER 3.0f
 #define playerMaxVelocity 200 * SPEED_MULTIPLIER
 
-#define RESOLUTION 100000
 INTERNAL float RandomInRange(float a, float f)
 {
-  unsigned int result = rand() % (RESOLUTION + 1);
-  float randomNumber = (f - a) * (float)result / (float)RESOLUTION + a;
-  return randomNumber;
+  return (float)rand() / RAND_MAX * (f - a) + a;
 }
 
 INTERNAL void resetBall() {
-  ball.velocity.x = RandomInRange(-1.0f, 1.0f) * playerMaxVelocity;
-  ball.velocity.y = RandomInRange(-1.0f, 1.0f) * playerMaxVelocity;
+  float speed = RandomInRange(0.5, 1.0f) * playerMaxVelocity;
+  float dirAngle = RandomInRange(-45.0f, 45.0f) * DEG_TO_RAD;
+  float dirMult = RandomInRange(-1.0f, 1.0f) > 0.0 ? 1.0 : -1.0f;
+  ball.velocity.x = cosf(dirAngle) * speed * dirMult;
+  ball.velocity.y = sinf(dirAngle) * speed * dirMult;
   ball.sprite.position.x = (float)screenWidth / 2.0f;
   ball.sprite.position.y = (float)screenHeight / 2.0f;
 }
