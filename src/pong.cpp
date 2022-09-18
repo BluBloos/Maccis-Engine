@@ -59,11 +59,26 @@ INTERNAL vec2 topRight= {};
 INTERNAL vec2 bottomLeft = {};
 INTERNAL vec2 bottomRight = {};
 
-INTERNAL float screenHeight;
-INTERNAL float screenWidth;
+INTERNAL float screenHeight = 0;
+INTERNAL float screenWidth = 0;
 
 #define SPEED_MULTIPLIER 3.0f
 #define playerMaxVelocity 200 * SPEED_MULTIPLIER
+
+#define RESOLUTION 100000
+INTERNAL float RandomInRange(float a, float f)
+{
+  unsigned int result = rand() % (RESOLUTION + 1);
+  float randomNumber = (f - a) * (float)result / (float)RESOLUTION + a;
+  return randomNumber;
+}
+
+INTERNAL void resetBall() {
+  ball.velocity.x = RandomInRange(-1.0f, 1.0f) * playerMaxVelocity;
+  ball.velocity.y = RandomInRange(-1.0f, 1.0f) * playerMaxVelocity;
+  ball.sprite.position.x = (float)screenWidth / 2.0f;
+  ball.sprite.position.y = (float)screenHeight / 2.0f;
+}
 
 INTERNAL text_handle PushText(text_engine *textEngine, memory_arena *arena, unsigned int characterAmount, float x, float y, unsigned int fontId, unsigned int textAlignment)
 {
@@ -97,14 +112,6 @@ INTERNAL unsigned int PushTexture(engine_state *engineState, texture tex)
   unsigned int index = engineState->textureCount;
   engineState->textures[engineState->textureCount++] = tex;
   return index;
-}
-
-#define RESOLUTION 100000
-INTERNAL float RandomInRange(float a, float f)
-{
-  unsigned int result = rand() % (RESOLUTION + 1);
-  float randomNumber = (f - a) * (float)result / (float)RESOLUTION + a;
-  return randomNumber;
 }
 
 INTERNAL void ExtractSpriteVertices(renderable_2D renderable, renderable_2D_vertex *vertices)
@@ -215,10 +222,7 @@ extern "C" GAME_INIT(GameInit)
   FreeBitmap(memory->FreeFile, ballBitmap);
 
   ball.sprite = SpriteFromBitmap(ballBitmap);
-  ball.velocity.x = RandomInRange(-1.0f, 1.0f) * playerMaxVelocity;
-  ball.velocity.y = RandomInRange(-1.0f, 1.0f) * playerMaxVelocity;
-  ball.sprite.position.x = (float)width / 2.0f;
-  ball.sprite.position.y = (float)height / 2.0f;
+  resetBall();
   ball.sprite.alignPercentage[0] = -0.5f;
   ball.sprite.alignPercentage[1] = 0.5f;
   //NOTE(Noah): the ball diameter is equal to the width of the bitmap, because that's how I made the bitmap,
@@ -372,10 +376,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     players[0].velocity = {}; players[1].velocity = {};
 
     //reset ball position and generate new random velocity
-    ball.velocity.x = RandomInRange(-1.0f, 1.0f) * playerMaxVelocity;
-    ball.velocity.y = RandomInRange(-1.0f, 1.0f) * playerMaxVelocity;
-    ball.sprite.position.x = screenWidth / 2.0f;
-    ball.sprite.position.y = screenHeight / 2.0f;
+    resetBall();
   }
 
   //test agaisnt right wall
@@ -394,10 +395,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     players[0].velocity = {}; players[1].velocity = {};
 
     //reset ball position and generate new random velocity
-    ball.velocity.x = RandomInRange(-1.0f, 1.0f) * playerMaxVelocity;
-    ball.velocity.y = RandomInRange(-1.0f, 1.0f) * playerMaxVelocity;
-    ball.sprite.position.x = screenWidth / 2.0f;
-    ball.sprite.position.y = screenHeight / 2.0f;
+    resetBall();
   }
 
   //collide agaisnt player 1
