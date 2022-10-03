@@ -1,4 +1,4 @@
-**IMPORTANT NOTE: The features of this "engine" are being moved into Automata-Engine, and subsequently this project will no longer be worked on. Please see the following repos: https://github.com/BluBloos/Automata-Engine, https://github.com/BluBloos/MonkeyDemo**
+**IMPORTANT NOTE: This project will no longer be worked on. Please see the following repos: https://github.com/BluBloos/Automata-Engine, https://github.com/BluBloos/MonkeyDemo**
 
 <img src="https://i.gyazo.com/427ac0168a87c73c9768de86f94d5d0b.gif" />
 
