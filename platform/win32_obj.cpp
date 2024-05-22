@@ -52,7 +52,7 @@ raw_model Win32LoadOBJ(memory_arena *Arena, char *maccisDirectory, char *objFile
       pValue = PyString_FromString(objFilePath);
       PyTuple_SetItem(pArgs, 0, pValue);
       pValue = PyObject_CallObject(pFunc, pArgs); //this calls the function and pValue is set to the return of the function
-      Py_DECREF(pArgs); //gotta make sure to decref that shit
+      Py_DECREF(pArgs); //gotta make sure to decref.
       if (pValue != NULL)
       {
         printf("obj function called and returned succesfully\n");

@@ -65,7 +65,7 @@ inline vec3 NewVec3(float x, float y, float z)
   vec3 result = {x, y, z}; return result;
 }
 
-//TODO(Noah): Make all math operations super fast, since otherwise our engine is shit!
+//TODO(Noah): Make all math operations super fast. The name of this engine isn't "Turtle Engine", after all. Ba dum tss.
 inline vec3 AddVec3(vec3 a, vec3 b)
 {
   vec3 c = {};
